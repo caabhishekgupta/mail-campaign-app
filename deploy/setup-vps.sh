@@ -17,7 +17,8 @@ npm i -g pm2 >/dev/null
 
 echo "==> Installing app to $APP_DIR"
 mkdir -p "$APP_DIR"
-cp -r "$(dirname "$0")/../." "$APP_DIR/"
+SRC="$(cd "$(dirname "$0")/.." && pwd)"
+if [ "$SRC" != "$APP_DIR" ]; then cp -r "$SRC/." "$APP_DIR/"; fi
 cd "$APP_DIR"
 npm ci --omit=dev || npm install --omit=dev
 mkdir -p data && chmod 700 data
