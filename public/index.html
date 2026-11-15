@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mail Campaigns – ConsultGuruji / CA Abhishek Gupta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--brand:#0f766e;--brand2:#115e59;--danger:#b91c1c;--ok:#15803d;--warn:#b45309;--r:12px}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+a{color:var(--brand)}button{font:inherit;cursor:pointer}input,select,textarea{font:inherit;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+textarea{min-height:90px;resize:vertical}label{display:block;font-size:13px;font-weight:600;color:#374151;margin:12px 0 6px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:8px;border:1px solid var(--brand);background:var(--brand);color:#fff;font-weight:600}
+.btn:hover{background:var(--brand2)}.btn.sec{background:#fff;color:var(--brand)}.btn.danger{background:var(--danger);border-color:var(--danger)}.btn.ghost{background:transparent;border-color:var(--line);color:var(--ink)}
+.btn:disabled{opacity:.5;cursor:not-allowed}.btn.sm{padding:6px 10px;font-size:13px}
+header{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+.top{display:flex;align-items:center;gap:12px;height:58px}
+.logo{font-weight:700;font-size:17px}.logo span{color:var(--brand)}
+.acc-switch{margin-left:auto;display:flex;gap:8px;align-items:center}
+.acc-switch select{width:auto;padding:8px 10px}
+nav{display:flex;gap:4px;overflow-x:auto;padding-bottom:0}
+nav button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 12px;font-weight:600;color:var(--muted);white-space:nowrap}
+nav button.on{color:var(--brand);border-color:var(--brand)}
+main{padding:20px 0 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:16px}
+.card h2{margin:0 0 12px;font-size:17px}.card h3{margin:14px 0 6px;font-size:14px;color:#374151}
+.grid{display:grid;gap:16px}.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}.g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.kpi{display:flex;flex-direction:column;gap:4px}.kpi b{font-size:26px}.kpi small{color:var(--muted)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;background:#eef2ff;color:#3730a3}
+.badge.sent{background:#dcfce7;color:#166534}.badge.draft{background:#f3f4f6;color:#374151}.badge.queued,.badge.inProcess{background:#fef3c7;color:#92400e}.badge.suspended{background:#fee2e2;color:#991b1b}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111827;color:#fff;padding:12px 18px;border-radius:10px;font-size:14px;z-index:50;max-width:92vw;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.toast.err{background:var(--danger)}.toast.ok{background:var(--ok)}
+.center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login{width:100%;max-width:380px}
+.preview{border:1px solid var(--line);border-radius:8px;background:#fff;height:520px;width:100%}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}
+.modal .card{width:100%;max-width:520px;max-height:90vh;overflow:auto}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:13px;cursor:pointer;background:#fff}.chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.hidden{display:none!important}
+.warnbox{background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px;font-size:13px;color:#92400e}
+.okbox{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 12px;font-size:13px;color:#166534}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;animation:s .7s linear infinite}@keyframes s{to{transform:rotate(360deg)}}
+@media(max-width:640px){.top{height:auto;padding:10px 0;flex-wrap:wrap}.acc-switch{margin-left:0;width:100%}.acc-switch select{flex:1}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const state = { status: null, accounts: [], accId: +localStorage.getItem("accId") || null, tab: localStorage.getItem("tab") || "dash", overview: null, campaigns: [], lists: [], drafts: [], composer: null, busy: false };
+
+async function api(path, opts = {}) {
+  const r = await fetch("/api" + path, { headers: opts.body && !(opts.body instanceof FormData) ? { "content-type": "application/json" } : {}, ...opts, body: opts.body && !(opts.body instanceof FormData) ? JSON.stringify(opts.body) : opts.body });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401 && path !== "/login") { state.status = { ...state.status, loggedIn: false }; render(); throw new Error("Login required"); }
+  if (!r.ok) { const e = new Error(d.error || r.statusText); e.data = d; throw e; }
+  return d;
+}
+let toastT; function toast(msg, cls = "") { let t = $(".toast"); if (!t) { t = document.createElement("div"); document.body.appendChild(t); } t.className = "toast " + cls; t.textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => t.remove(), cls === "err" ? 7000 : 3500); }
+const acc = () => state.accounts.find((a) => a.id === state.accId);
+
+// ---------------- boot ----------------
+async function boot() { state.status = await api("/status"); if (state.status.loggedIn) await loadAccounts(); render(); }
+async function loadAccounts() {
+  state.accounts = await api("/accounts");
+  if (!acc() && state.accounts[0]) state.accId = state.accounts[0].id;
+  if (acc()) { document.documentElement.style.setProperty("--brand", acc().brand_color); document.documentElement.style.setProperty("--brand2", acc().brand_color); }
+}
+function setTab(t) { state.tab = t; localStorage.setItem("tab", t); render(); loadTab(); }
+async function loadTab() {
+  if (!acc()) return;
+  try {
+    if (state.tab === "dash") { state.overview = await api(`/accounts/${state.accId}/overview`); state.campaigns = await api(`/accounts/${state.accId}/campaigns`); }
+    if (state.tab === "campaigns") state.campaigns = await api(`/accounts/${state.accId}/campaigns`);
+    if (state.tab === "contacts") state.lists = await api(`/accounts/${state.accId}/lists`);
+    if (state.tab === "compose") { state.lists = await api(`/accounts/${state.accId}/lists`); state.overview = state.overview || await api(`/accounts/${state.accId}/overview`); state.drafts = await api("/drafts"); }
+    render();
+  } catch (e) { toast(e.message, "err"); }
+}
+
+// ---------------- render ----------------
+function render() {
+  const app = $("#app");
+  if (!state.status) return (app.innerHTML = "<div class=center>Loading…</div>");
+  if (!state.status.setup) return (app.innerHTML = authView("setup"));
+  if (!state.status.loggedIn) return (app.innerHTML = authView("login"));
+  const a = acc();
+  app.innerHTML = `
+  <header><div class="wrap">
+    <div class="top">
+      <div class="logo">📧 <span>${esc(a ? a.name : "Mail Campaigns")}</span></div>
+      <div class="acc-switch">
+        <select id="accSel">${state.accounts.map((x) => `<option value="${x.id}" ${x.id === state.accId ? "selected" : ""}>${esc(x.name)}</option>`).join("")}${state.accounts.length ? "" : "<option>No account yet</option>"}</select>
+        <button class="btn sec sm" onclick="setTab('settings')">⚙️</button>
+        <button class="btn ghost sm" onclick="logout()">Logout</button>
+      </div>
+    </div>
+    <nav>${[["dash", "Dashboard"], ["compose", "✍️ New Campaign"], ["campaigns", "Campaigns"], ["contacts", "Contacts"], ["settings", "Settings"]].map(([k, v]) => `<button class="${state.tab === k ? "on" : ""}" onclick="setTab('${k}')">${v}</button>`).join("")}</nav>
+  </div></header>
+  <main><div class="wrap" id="view">${a || state.tab === "settings" ? views[state.tab]() : noAccount()}</div></main>`;
+  $("#accSel")?.addEventListener("change", (e) => { state.accId = +e.target.value; localStorage.setItem("accId", state.accId); state.overview = null; loadAccounts().then(() => { render(); loadTab(); }); });
+  if (state.tab === "compose") mountComposer();
+}
+function authView(mode) {
+  return `<div class="center"><div class="card login">
+    <div class="logo" style="margin-bottom:8px">📧 <span>Mail Campaigns</span></div>
+    <div class="muted" style="margin-bottom:12px">${mode === "setup" ? "First time setup — create an admin password (8+ chars)." : "Office login"}</div>
+    <label>Password</label><input type="password" id="pw" autofocus>
+    <div style="margin-top:14px"><button class="btn" style="width:100%;justify-content:center" onclick="doAuth('${mode}')">${mode === "setup" ? "Create & Login" : "Login"}</button></div>
+  </div></div>`;
+}
+async function doAuth(mode) { try { await api(mode === "setup" ? "/setup" : "/login", { method: "POST", body: { password: $("#pw").value } }); await boot(); } catch (e) { toast(e.message, "err"); } }
+async function logout() { await api("/logout", { method: "POST" }); state.status.loggedIn = false; render(); }
+const noAccount = () => `<div class="card"><h2>Pehle ek Brevo account jodo</h2><p class="muted">Settings → Add account me Brevo API key daalo (Brevo → Settings → SMTP & API → Generate new API key).</p><button class="btn" onclick="setTab('settings')">Go to Settings</button></div>`;
+
+const views = {
+  dash() {
+    const o = state.overview; if (!o) return `<div class="card">Loading account…</div>`;
+    const plan = o.account?.plan?.find?.((p) => p.type === "free" || p.type === "subscription") || o.account?.plan?.[0];
+    const credits = o.account?.plan?.map((p) => `${p.type}: ${p.credits ?? "-"} ${p.creditsType || ""}`).join(" · ");
+    const verified = o.senders.filter((s) => s.active);
+    const authDomain = o.domains.find((d) => d.authenticated || d.verified);
+    const sent = state.campaigns.filter((c) => c.status === "sent").slice(0, 5);
+    return `
+    <div class="grid g3">
+      <div class="card kpi"><small>Aaj bheje (is app se)</small><b>${o.sentToday} / ${o.dailyLimit}</b><small>Free plan daily limit</small></div>
+      <div class="card kpi"><small>Brevo credits</small><b style="font-size:16px">${esc(credits || "-")}</b><small>${esc(o.account?.email || "")}</small></div>
+      <div class="card kpi"><small>Lists / Verified senders</small><b>${o.lists.length} / ${verified.length}</b><small>${esc(o.account?.companyName || "")}</small></div>
+    </div>
+    ${!verified.length ? `<div class="warnbox">⚠️ Koi verified sender nahi hai. Brevo → Senders me email add karke verify karo, warna campaign nahi jayega.</div>` : ""}
+    ${!authDomain ? `<div class="warnbox" style="margin-top:8px">⚠️ Domain authenticate nahi hai (SPF/DKIM/DMARC). Gmail/Yahoo par delivery ke liye Brevo → Senders → Domains me domain add karke DNS records lagao. Gmail.com sender se bulk mail spam me jayegi.</div>` : `<div class="okbox" style="margin-top:8px">✅ Domain authenticated: ${esc(authDomain.domain_name || authDomain.domain)}</div>`}
+    <div class="card" style="margin-top:16px"><h2>Quick actions</h2><div class="row">
+      <button class="btn" onclick="setTab('compose')">✍️ Nayi campaign</button>
+      <button class="btn sec" onclick="setTab('contacts')">📥 Contacts import</button>
+      <button class="btn sec" onclick="setTab('campaigns')">📊 Reports</button></div></div>
+    <div class="card"><h2>Recent sent campaigns</h2>${sent.length ? campaignTable(sent) : '<p class="muted">Abhi tak koi campaign nahi bheji.</p>'}</div>`;
+  },
+  campaigns() {
+    return `<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">All campaigns</h2><button class="btn sec sm" onclick="loadTab()">↻ Refresh</button></div><br>${state.campaigns.length ? campaignTable(state.campaigns, true) : '<p class="muted">Koi campaign nahi.</p>'}</div>`;
+  },
+  contacts() {
+    return `<div class="grid g2">
+      <div class="card"><h2>Lists</h2>
+        ${state.lists.length ? `<table><tr><th>Name</th><th>Subscribers</th><th></th></tr>${state.lists.map((l) => `<tr><td>${esc(l.name)}<br><small class=muted>ID ${l.id}</small></td><td>${l.totalSubscribers ?? l.uniqueSubscribers ?? 0}</td><td><button class="btn ghost sm" onclick="viewContacts(${l.id},'${esc(l.name)}')">View</button></td></tr>`).join("")}</table>` : '<p class="muted">Koi list nahi.</p>'}
+        <h3>New list</h3><div class="row"><input id="newList" placeholder="e.g. GST Clients 2026" style="flex:1"><button class="btn" onclick="createList()">Create</button></div>
+      </div>
+      <div class="card"><h2>Import contacts (CSV / Excel-export)</h2>
+        <p class="muted">Columns: <b>Email</b> (required), Name/First Name, Last Name, Mobile. Hindi column names bhi chal jayenge agar "Email" column hai.</p>
+        <label>Target list</label><select id="impList">${state.lists.map((l) => `<option value="${l.id}">${esc(l.name)}</option>`).join("")}</select>
+        <label>CSV file</label><input type="file" id="impFile" accept=".csv,text/csv">
+        <label>…ya yahan paste karo (email,name per line)</label><textarea id="impText" placeholder="email,name&#10;ramesh@abc.com,Ramesh Shah"></textarea>
+        <div style="margin-top:12px"><button class="btn" onclick="importContacts()">Import</button></div>
+        <div id="impStatus" class="muted" style="margin-top:8px"></div>
+      </div>
+      <div class="card" id="contactsView" style="grid-column:1/-1"></div>
+    </div>`;
+  },
+  compose() { return composerView(); },
+  settings() {
+    return `<div class="grid g2">
+      <div class="card"><h2>Brevo accounts</h2>
+        ${state.accounts.map((a) => `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)"><div><b style="color:${a.brand_color}">●</b> <b>${esc(a.name)}</b><br><small class=muted>${esc(a.default_sender_name || "")} &lt;${esc(a.default_sender_email || "no sender")}&gt; · key ${esc(a.api_key)}</small></div><div><button class="btn ghost sm" onclick="editAccount(${a.id})">Edit</button> <button class="btn ghost sm" onclick="delAccount(${a.id})">🗑</button></div></div>`).join("")}
+        <div style="margin-top:12px"><button class="btn" onclick="editAccount(null)">+ Add account</button></div>
+      </div>
+      <div class="card"><h2>Claude AI (email drafting)</h2>
+        <p class="muted">Anthropic Console se API key (sk-ant-…). Key server par encrypted rehti hai.</p>
+        <label>API key <span class="muted" id="aiKeyNow"></span></label><input id="aiKey" type="password" placeholder="sk-ant-api03-…">
+        <div class="row" style="margin-top:12px"><button class="btn" onclick="saveAI()">Save</button><button class="btn ghost" onclick="saveAI(true)">Remove key</button></div>
+        <h3>Change login password</h3><label>Current</label><input id="pwCur" type="password"><label>New (8+)</label><input id="pwNew" type="password"><div style="margin-top:10px"><button class="btn sec" onclick="changePw()">Update password</button></div>
+      </div>
+    </div>`;
+  },
+};
+setTimeout(() => { if (state.tab === "settings" && state.status?.loggedIn) api("/settings").then((s) => { const e = $("#aiKeyNow"); if (e) e.textContent = s.anthropicKey ? `(saved: ${s.anthropicKey})` : "(not set)"; }); }, 50);
+
+function campaignTable(list, full) {
+  return `<div style="overflow:auto"><table><tr><th>Subject</th><th>Status</th><th>Sent</th><th>Delivered</th><th>Opens</th><th>Clicks</th><th>Date</th>${full ? "<th></th>" : ""}</tr>
+  ${list.map((c) => { const s = c.statistics?.globalStats || {}; const d = c.sentDate || c.scheduledAt || c.modifiedAt || c.createdAt; return `<tr><td><b>${esc(c.subject)}</b><br><small class=muted>${esc(c.name)} · #${c.id}</small></td><td><span class="badge ${c.status}">${c.status}</span></td><td>${s.sent ?? "-"}</td><td>${s.delivered ?? "-"}</td><td>${s.uniqueViews ?? "-"}</td><td>${s.uniqueClicks ?? "-"}</td><td><small>${d ? new Date(d).toLocaleString("en-IN") : "-"}</small></td>${full ? `<td class=row>${c.status === "draft" ? `<button class="btn sm" onclick="sendExisting(${c.id})">Send</button><button class="btn ghost sm" onclick="testExisting(${c.id})">Test</button><button class="btn ghost sm" onclick="delCampaign(${c.id})">🗑</button>` : ""}</td>` : ""}</tr>`; }).join("")}</table></div>`;
+}
+
+// ---------------- contacts ----------------
+async function createList() { const n = $("#newList").value.trim(); if (!n) return; try { await api(`/accounts/${state.accId}/lists`, { method: "POST", body: { name: n } }); toast("List created", "ok"); loadTab(); } catch (e) { toast(e.message, "err"); } }
+async function importContacts() {
+  const listId = $("#impList").value; const f = $("#impFile").files[0]; const txt = $("#impText").value.trim();
+  if (!listId) return toast("Pehle list banao", "err"); if (!f && !txt) return toast("CSV file ya text do", "err");
+  const fd = new FormData(); fd.append("listIds", listId); if (f) fd.append("file", f); else fd.append("csv", txt);
+  $("#impStatus").textContent = "Uploading…";
+  try {
+    const r = await api(`/accounts/${state.accId}/import`, { method: "POST", body: fd });
+    $("#impStatus").textContent = `Import started: ${r.rows} rows (columns: ${r.columns.join(", ")}). Processing…`;
+    const poll = async () => { const s = await api(`/accounts/${state.accId}/import/${r.processId}`); $("#impStatus").textContent = `Import ${s.status} — ${s.name || ""}`; if (s.status === "completed" || s.status === "error") loadTab(); else setTimeout(poll, 3000); };
+    setTimeout(poll, 3000);
+  } catch (e) { $("#impStatus").textContent = ""; toast(e.message, "err"); }
+}
+async function viewContacts(id, name) {
+  const el = $("#contactsView"); el.innerHTML = "Loading…";
+  try { const r = await api(`/accounts/${state.accId}/lists/${id}/contacts?limit=100`); el.innerHTML = `<h2>${esc(name)} — ${r.count} contacts</h2><div style="overflow:auto;max-height:400px"><table><tr><th>Email</th><th>Name</th><th>Mobile</th><th>Added</th></tr>${(r.contacts || []).map((c) => `<tr><td>${esc(c.email)}</td><td>${esc([c.attributes?.FIRSTNAME, c.attributes?.LASTNAME].filter(Boolean).join(" "))}</td><td>${esc(c.attributes?.SMS || "")}</td><td><small>${new Date(c.createdAt).toLocaleDateString("en-IN")}</small></td></tr>`).join("")}</table></div>`; } catch (e) { el.innerHTML = ""; toast(e.message, "err"); }
+}
+
+// ---------------- composer ----------------
+function defaultComposer() { const a = acc(); return { id: null, name: "", subject: "", preview_text: "", html: "", list_ids: [], sender_name: a?.default_sender_name || a?.name || "", sender_email: a?.default_sender_email || "", scheduled_at: "", ai: { language: "Hinglish", goal: "", points: "", cta: "", ctaUrl: "https://consultguruji.com", tone: "friendly professional" }, campaignId: null }; }
+function composerView() {
+  if (!state.composer) state.composer = defaultComposer();
+  const c = state.composer; const o = state.overview; const senders = (o?.senders || []).filter((s) => s.active);
+  return `<div class="grid" style="grid-template-columns:minmax(300px,1fr) minmax(300px,1.2fr)">
+  <div>
+    <div class="card"><h2>🤖 Claude se draft banwao</h2>
+      <label>Language</label><div class="chips" id="langChips">${["Hindi", "Hinglish", "English", "Gujarati"].map((l) => `<span class="chip ${c.ai.language === l ? "on" : ""}" data-l="${l}">${l}</span>`).join("")}</div>
+      <label>Email ka maqsad (goal)</label><textarea id="aiGoal" placeholder="e.g. GST return due date 20 Nov reminder + hamari service offer">${esc(c.ai.goal)}</textarea>
+      <label>Key points (optional)</label><textarea id="aiPoints" placeholder="- Late fee ₹50/day&#10;- Hum 1 din me file kar dete hain&#10;- WhatsApp 98xxxxxxx">${esc(c.ai.points)}</textarea>
+      <div class="grid g2"><div><label>CTA button text</label><input id="aiCta" value="${esc(c.ai.cta)}" placeholder="Abhi File Karein"></div><div><label>CTA link</label><input id="aiUrl" value="${esc(c.ai.ctaUrl)}"></div></div>
+      <div style="margin-top:12px" class="row"><button class="btn" id="aiBtn" onclick="aiDraft()">✨ Generate draft</button>
+        <input id="aiImprove" placeholder="Improve: 'thoda chhota karo', 'subject catchy'" style="flex:1;min-width:160px"><button class="btn sec" onclick="aiImprove()">Improve</button></div>
+      <div id="aiAlts" class="muted" style="margin-top:8px"></div>
+    </div>
+    <div class="card"><h2>Campaign details</h2>
+      <label>Subject</label><input id="cSubject" value="${esc(c.subject)}">
+      <label>Preview text</label><input id="cPreview" value="${esc(c.preview_text)}">
+      <label>Internal name</label><input id="cName" value="${esc(c.name)}" placeholder="GST reminder Nov 2026">
+      <div class="grid g2"><div><label>Sender name</label><input id="cSName" value="${esc(c.sender_name)}"></div>
+      <div><label>Sender email (verified)</label>${senders.length ? `<select id="cSEmail">${senders.map((s) => `<option value="${esc(s.email)}" ${s.email === c.sender_email ? "selected" : ""}>${esc(s.email)}</option>`).join("")}</select>` : `<input id="cSEmail" value="${esc(c.sender_email)}" placeholder="verified sender email">`}</div></div>
+      <label>Send to lists</label><div class="chips" id="listChips">${state.lists.map((l) => `<span class="chip ${c.list_ids.includes(l.id) ? "on" : ""}" data-id="${l.id}">${esc(l.name)} (${l.totalSubscribers ?? 0})</span>`).join("") || '<span class=muted>Koi list nahi — Contacts tab me banao</span>'}</div>
+      <label>Schedule (optional, IST)</label><input type="datetime-local" id="cSched" value="${esc(c.scheduled_at)}">
+      <div class="row" style="margin-top:14px">
+        <button class="btn sec" onclick="saveDraft()">💾 Save draft</button>
+        <button class="btn sec" onclick="createInBrevo()">📤 Create in Brevo</button>
+        <button class="btn ghost" onclick="sendTest()">✉️ Test email</button>
+        <button class="btn" onclick="sendCampaign()">🚀 ${c.scheduled_at ? "Schedule" : "Send now"}</button>
+      </div>
+      ${c.campaignId ? `<p class="muted">Brevo campaign #${c.campaignId} created.</p>` : ""}
+      ${state.drafts.length ? `<h3>Saved drafts</h3>${state.drafts.slice(0, 8).map((d) => `<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)"><span>${esc(d.subject || d.name || "untitled")} <small class=muted>${new Date(d.updated_at + "Z").toLocaleString("en-IN")}</small></span><span><button class="btn ghost sm" onclick="openDraft(${d.id})">Open</button> <button class="btn ghost sm" onclick="delDraft(${d.id})">🗑</button></span></div>`).join("")}` : ""}
+    </div>
+  </div>
+  <div>
+    <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Preview</h2><div class="row"><button class="btn ghost sm" onclick="togglePreview('mobile')">📱</button><button class="btn ghost sm" onclick="togglePreview('desktop')">🖥️</button><button class="btn ghost sm" onclick="toggleHtml()">HTML</button></div></div>
+      <iframe class="preview" id="pv" sandbox="allow-same-origin" style="margin-top:10px"></iframe>
+      <textarea id="cHtml" class="hidden" style="min-height:420px;font-family:monospace;font-size:12px;margin-top:10px">${esc(c.html)}</textarea>
+    </div>
+  </div></div>`;
+}
+function mountComposer() {
+  const c = state.composer; if (!c) return;
+  $("#langChips")?.addEventListener("click", (e) => { const l = e.target.dataset.l; if (!l) return; c.ai.language = l; $("#langChips").querySelectorAll(".chip").forEach((x) => x.classList.toggle("on", x.dataset.l === l)); });
+  $("#listChips")?.addEventListener("click", (e) => { const id = +e.target.dataset.id; if (!id) return; c.list_ids = c.list_ids.includes(id) ? c.list_ids.filter((x) => x !== id) : [...c.list_ids, id]; e.target.classList.toggle("on"); });
+  $("#cHtml")?.addEventListener("input", (e) => { c.html = e.target.value; paint(); });
+  paint();
+}
+function syncComposer() {
+  const c = state.composer; const g = (id) => $("#" + id)?.value ?? "";
+  Object.assign(c, { subject: g("cSubject"), preview_text: g("cPreview"), name: g("cName"), sender_name: g("cSName"), sender_email: g("cSEmail"), scheduled_at: g("cSched"), html: g("cHtml") });
+  Object.assign(c.ai, { goal: g("aiGoal"), points: g("aiPoints"), cta: g("aiCta"), ctaUrl: g("aiUrl") });
+  return c;
+}
+function paint() { const pv = $("#pv"); if (!pv) return; const a = acc(); const footer = (a?.footer || `${a?.name || ""}, Mumbai, Maharashtra 400009`).replace(/\n/g, "<br>"); let h = state.composer.html || "<p style='font-family:sans-serif;color:#888;padding:20px'>Draft yahan dikhega…</p>"; h = h.replace(/\{\{\s*footer\s*\}\}/g, footer).replace(/\{\{\s*brand_color\s*\}\}/g, a?.brand_color || "#0f766e").replace(/\{\{\s*unsubscribe\s*\}\}/g, "#").replace(/\{\{\s*contact\.FIRSTNAME[^}]*\}\}/g, "Ramesh"); pv.srcdoc = h; }
+function togglePreview(m) { const pv = $("#pv"); pv.style.width = m === "mobile" ? "375px" : "100%"; pv.style.margin = m === "mobile" ? "10px auto 0" : "10px 0 0"; pv.style.display = "block"; }
+function toggleHtml() { $("#cHtml").classList.toggle("hidden"); }
+function applyAI(r) { const c = state.composer; c.subject = r.subject || c.subject; c.preview_text = r.preview_text || c.preview_text; c.html = r.html || c.html; if (!c.name) c.name = (r.subject || "").slice(0, 60); render(); const alts = $("#aiAlts"); if (alts && r.subject_alternatives?.length) alts.innerHTML = "Alternative subjects: " + r.subject_alternatives.map((s) => `<a href="#" onclick="event.preventDefault();state.composer.subject=${JSON.stringify(s).replace(/"/g, "&quot;")};$('#cSubject').value=state.composer.subject">${esc(s)}</a>`).join(" · "); }
+async function aiDraft() {
+  const c = syncComposer(); if (!c.ai.goal.trim()) return toast("Email ka goal likho", "err");
+  const b = $("#aiBtn"); b.disabled = true; b.innerHTML = '<span class="spin"></span> Writing…';
+  try { const a = acc(); applyAI(await api("/ai/draft", { method: "POST", body: { brand: a.name, brandColor: a.brand_color, ...c.ai } })); toast("Draft ready — preview dekho", "ok"); }
+  catch (e) { toast(e.message, "err"); } finally { b.disabled = false; b.innerHTML = "✨ Generate draft"; }
+}
+async function aiImprove() {
+  const c = syncComposer(); const ins = $("#aiImprove").value.trim(); if (!ins) return toast("Improve instruction likho", "err"); if (!c.html) return toast("Pehle draft banao", "err");
+  toast("Improving…"); try { applyAI(await api("/ai/improve", { method: "POST", body: { html: c.html, subject: c.subject, instruction: ins, language: c.ai.language } })); toast("Updated", "ok"); } catch (e) { toast(e.message, "err"); }
+}
+async function saveDraft() { const c = syncComposer(); try { const r = await api("/drafts", { method: "POST", body: { ...c, account_id: state.accId } }); c.id = r.id; toast("Draft saved", "ok"); state.drafts = await api("/drafts"); render(); } catch (e) { toast(e.message, "err"); } }
+async function openDraft(id) { const d = await api(`/drafts/${id}`); state.composer = { ...defaultComposer(), ...d, list_ids: JSON.parse(d.list_ids || "[]"), campaignId: d.brevo_campaign_id }; render(); }
+async function delDraft(id) { if (!confirmBox("Draft delete karein?")) return; await api(`/drafts/${id}`, { method: "DELETE" }); state.drafts = await api("/drafts"); render(); }
+function confirmBox(msg) { return window.confirm(msg); }
+function validate(c) { if (!c.subject) return "Subject chahiye"; if (!c.html) return "Email content chahiye"; if (!c.list_ids.length) return "Kam se kam ek list chuno"; if (!c.sender_email) return "Sender email chahiye (verified)"; return null; }
+async function createInBrevo(silent) {
+  const c = syncComposer(); const err = validate(c); if (err) { toast(err, "err"); return null; }
+  try {
+    if (c.campaignId) { await api(`/accounts/${state.accId}/campaigns/${c.campaignId}`, { method: "PUT", body: c }); if (!silent) toast("Brevo campaign updated", "ok"); }
+    else { const r = await api(`/accounts/${state.accId}/campaigns`, { method: "POST", body: c }); c.campaignId = r.id; if (!silent) toast(`Created in Brevo (#${r.id})`, "ok"); }
+    render(); return c.campaignId;
+  } catch (e) { toast(e.message, "err"); return null; }
+}
+async function sendTest() {
+  const id = await createInBrevo(true); if (!id) return;
+  const to = prompt("Test email address(es), comma separated:", acc()?.default_sender_email || ""); if (!to) return;
+  try { await api(`/accounts/${state.accId}/campaigns/${id}/test`, { method: "POST", body: { emails: to } }); toast("Test sent to " + to, "ok"); } catch (e) { toast(e.message, "err"); }
+}
+async function sendCampaign() {
+  const c = syncComposer(); const id = await createInBrevo(true); if (!id) return;
+  if (c.scheduled_at) { toast(`Scheduled for ${new Date(c.scheduled_at).toLocaleString("en-IN")} ✅`, "ok"); state.composer = defaultComposer(); setTab("campaigns"); return; }
+  await sendExisting(id);
+}
+async function sendExisting(id) {
+  try {
+    let r; try { r = await api(`/accounts/${state.accId}/campaigns/${id}/send`, { method: "POST", body: { confirm: false } }); } catch (e) { r = e.data; if (!r || r.recipients === undefined) throw e; }
+    const n = r.recipients; const lim = state.overview?.dailyLimit || 300; const used = state.overview?.sentToday || 0;
+    let msg = `Campaign #${id} ko ${n} contacts par ABHI bhejna hai?`; if (used + n > lim) msg += `\n\n⚠️ Free plan limit ${lim}/day — aaj ${used} ja chuke. ${n} aur bhejne par Brevo queue/split karega.`;
+    if (!confirmBox(msg)) return;
+    await api(`/accounts/${state.accId}/campaigns/${id}/send`, { method: "POST", body: { confirm: true } });
+    toast(`🚀 Sent to ${n} contacts`, "ok"); state.composer = defaultComposer(); state.overview = null; setTab("campaigns");
+  } catch (e) { toast(e.message, "err"); }
+}
+async function testExisting(id) { const to = prompt("Test email address:", acc()?.default_sender_email || ""); if (!to) return; try { await api(`/accounts/${state.accId}/campaigns/${id}/test`, { method: "POST", body: { emails: to } }); toast("Test sent", "ok"); } catch (e) { toast(e.message, "err"); } }
+async function delCampaign(id) { if (!confirmBox("Delete draft campaign #" + id + "?")) return; try { await api(`/accounts/${state.accId}/campaigns/${id}`, { method: "DELETE" }); loadTab(); } catch (e) { toast(e.message, "err"); } }
+
+// ---------------- settings ----------------
+function editAccount(id) {
+  const a = id ? state.accounts.find((x) => x.id === id) : { name: "", brand_color: "#0f766e", default_sender_name: "", default_sender_email: "", reply_to: "", footer: "", daily_limit: 300 };
+  const m = document.createElement("div"); m.className = "modal"; m.innerHTML = `<div class="card"><h2>${id ? "Edit" : "Add"} Brevo account</h2>
+    <label>Brand / account name</label><input id="fName" value="${esc(a.name)}" placeholder="ConsultGuruji">
+    <label>Brevo API key ${id ? "<span class=muted>(blank = keep current)</span>" : ""}</label><input id="fKey" type="password" placeholder="xkeysib-…">
+    <div class="grid g2"><div><label>Default sender name</label><input id="fSName" value="${esc(a.default_sender_name)}"></div><div><label>Default sender email (verified in Brevo)</label><input id="fSEmail" value="${esc(a.default_sender_email)}"></div></div>
+    <div class="grid g2"><div><label>Reply-to</label><input id="fReply" value="${esc(a.reply_to)}"></div><div><label>Brand color</label><input id="fColor" type="color" value="${esc(a.brand_color)}" style="height:42px"></div></div>
+    <label>Footer address (shows in every email)</label><textarea id="fFooter" placeholder="CA Abhishek Gupta, Mumbai, Maharashtra 400009">${esc(a.footer)}</textarea>
+    <label>Daily limit</label><input id="fLimit" type="number" value="${a.daily_limit}">
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn ghost" onclick="this.closest('.modal').remove()">Cancel</button><button class="btn" id="fSave">Save</button></div></div>`;
+  document.body.appendChild(m);
+  $("#fSave", m).onclick = async () => {
+    const body = { name: $("#fName", m).value, api_key: $("#fKey", m).value, default_sender_name: $("#fSName", m).value, default_sender_email: $("#fSEmail", m).value, reply_to: $("#fReply", m).value, brand_color: $("#fColor", m).value, footer: $("#fFooter", m).value, daily_limit: +$("#fLimit", m).value || 300 };
+    if (!body.api_key) delete body.api_key;
+    try { await api(id ? `/accounts/${id}` : "/accounts", { method: id ? "PUT" : "POST", body }); m.remove(); await loadAccounts(); if (!id) state.accId = state.accounts.at(-1).id; toast("Saved", "ok"); render(); } catch (e) { toast(e.message, "err"); }
+  };
+}
+async function delAccount(id) { if (!confirmBox("Account app se hatana hai? (Brevo account delete nahi hoga)")) return; await api(`/accounts/${id}`, { method: "DELETE" }); state.accId = null; await loadAccounts(); render(); }
+async function saveAI(remove) { try { await api("/settings", { method: "POST", body: { anthropicKey: remove ? "" : $("#aiKey").value } }); toast(remove ? "Key removed" : "Saved", "ok"); render(); } catch (e) { toast(e.message, "err"); } }
+async function changePw() { try { await api("/change-password", { method: "POST", body: { current: $("#pwCur").value, next: $("#pwNew").value } }); toast("Password updated", "ok"); } catch (e) { toast(e.message, "err"); } }
+
+boot().then(loadTab);
+</script>
+</body>
+</html>
