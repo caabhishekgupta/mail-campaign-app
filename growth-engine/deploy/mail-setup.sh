@@ -43,7 +43,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
     environment:
       - SSL_TYPE=letsencrypt
-      - SSL_DOMAIN=$MAILHOST
+      - SSL_DOMAIN=go.$DOMAIN   # certbot lineage name (cert also covers $MAILHOST)
       - ENABLE_CLAMAV=0
       - ENABLE_SPAMASSASSIN=0
       - ENABLE_FAIL2BAN=1
