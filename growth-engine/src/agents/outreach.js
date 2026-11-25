@@ -48,16 +48,16 @@ What we sell for this lead type: ${ctx}
 Owner's rough idea / keywords (may be very short like "mca"): ${[name, hint].filter(Boolean).join(" | ") || "(none)"}
 Email language: ${language || "English"}
 
-Write 3 DIFFERENT campaign options (different angle each: e.g. compliance deadline, cost/time saving, free audit/sample/demo). Each option:
+Write 3 DIFFERENT campaign options (keep each offer under 110 words; plain ASCII quotes; no line breaks inside strings) (different angle each: e.g. compliance deadline, cost/time saving, free audit/sample/demo). Each option:
 - name: short internal campaign name
 - offer: a 60-110 word brief for the AI email writer — who exactly we target, the specific problem they have, what we offer, why us (only true facts from above; no invented numbers, prices, client names or guarantees), tone
 - cta: one low-friction call to action (reply / 15-min call / free sample or demo); use placeholder "+91 XXXXXXXXXX" if a phone number is needed
 - step_gaps: like "0,3,7"
 - daily_new: suggested new people per day during warm-up (10-25)
 Return ONLY JSON: {"options":[{"name":"","offer":"","cta":"","step_gaps":"","daily_new":15}]}`;
-  const r = await runAI({ agent: "campaign-planner", system: "You are a B2B marketing strategist for an Indian chartered accountant's firm. Be specific, honest and practical. Return only JSON.", prompt, maxTokens: 1500 });
+  const r = await runAI({ agent: "campaign-planner", system: "You are a B2B marketing strategist for an Indian chartered accountant's firm. Be specific, honest and practical. Return only JSON.", prompt, maxTokens: 4000 });
   const j = parseJSON(r.text);
-  const opts = (j.options || j).filter((o) => o && o.offer).slice(0, 3).map((o) => ({
+  const opts = (Array.isArray(j) ? j : j.options || []).filter((o) => o && o.offer).slice(0, 3).map((o) => ({
     name: String(o.name || name || "Campaign").slice(0, 80), offer: String(o.offer).trim(), cta: String(o.cta || "").trim(),
     step_gaps: /^\d+(,\d+){0,4}$/.test(String(o.step_gaps || "")) ? o.step_gaps : "0,3,7", daily_new: Math.min(25, Math.max(5, Number(o.daily_new) || 15)),
   }));

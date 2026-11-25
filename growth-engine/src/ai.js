@@ -106,7 +106,7 @@ async function callGemini(key, { system, prompt, search, maxTokens }) {
   const model = key.model || DEFAULT_MODELS.gemini;
   const body = {
     contents: [{ role: "user", parts: [{ text: prompt }] }],
-    generationConfig: { maxOutputTokens: maxTokens },
+    generationConfig: { maxOutputTokens: maxTokens, ...(/flash/i.test(model) ? { thinkingConfig: { thinkingBudget: 0 } } : {}), ...(search ? {} : { responseMimeType: "application/json" }) },
   };
   if (system) body.systemInstruction = { parts: [{ text: system }] };
   if (search) body.tools = [{ google_search: {} }];
@@ -138,12 +138,34 @@ export async function testKey(key) {
   return { ok: true, reply: r.text.trim().slice(0, 40), model: r.model };
 }
 
-/** Extract the first JSON value (array or object) from model text. */
+/** Extract JSON from model text. If the reply was cut off or slightly broken,
+ *  salvage every complete {...} object inside it (so 2 of 3 options still work). */
 export function parseJSON(text) {
   const t = String(text || "").replace(/```(?:json)?/gi, "");
   const starts = [t.indexOf("["), t.indexOf("{")].filter((i) => i >= 0);
   if (!starts.length) throw new Error("AI returned no JSON");
   const s = Math.min(...starts); const open = t[s], close = open === "[" ? "]" : "}";
   const e = t.lastIndexOf(close);
-  return JSON.parse(t.slice(s, e + 1));
+  try { return JSON.parse(t.slice(s, e + 1)); } catch (err) {
+    const objs = completeObjects(t.slice(s));
+    if (!objs.length) throw new Error("AI reply was incomplete — please try again");
+    // top-level object parsed fine on its own?
+    if (objs.length === 1 && open === "{" && !/\{[^{}]*\{/.test(t.slice(s + 1, s + 400))) return objs[0];
+    return { options: objs, businesses: objs, _salvaged: true };
+  }
+}
+function completeObjects(str) {
+  const out = []; let depth = 0, start = -1, inStr = false, esc = false;
+  for (let i = 0; i < str.length; i++) {
+    const c = str[i];
+    if (inStr) { if (esc) esc = false; else if (c === "\\") esc = true; else if (c === '"') inStr = false; continue; }
+    if (c === '"') inStr = true;
+    else if (c === "{") { depth++; if (depth === 2 || (depth === 1 && str[0] === "[")) start = i; }
+    else if (c === "}") {
+      if ((depth === 2 || (depth === 1 && str[0] === "[")) && start >= 0) { try { out.push(JSON.parse(str.slice(start, i + 1))); } catch {} start = -1; }
+      depth--;
+    }
+  }
+  if (!out.length) { try { out.push(JSON.parse(str.slice(0, str.lastIndexOf("}") + 1))); } catch {} }
+  return out;
 }
