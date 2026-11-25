@@ -14,7 +14,7 @@ Rules:
 - One clear, low-friction ask (a reply, a 10-minute call). No pressure, no fake urgency, no "Re:" tricks, no ALL CAPS.
 - Sound like a real professional writing one email, not marketing copy. Avoid: delve, leverage, seamless, robust, game-changer, "I hope this email finds you well", "it's not X, it's Y".
 - Do NOT add a signature or unsubscribe line (added automatically).
-Return ONLY JSON: {"subject":"<max 7 words, lowercase ok, no clickbait>","body":"<email text>"}`;
+Return ONLY JSON: {"subject":"<max 7 words, lowercase ok, no clickbait>","body":"<email text; use \\n for new lines; never put a double-quote character inside values, use single quotes>"}`;
 
 function gaps(c) { return String(c.step_gaps || "0,3,7").split(",").map((x) => Math.max(0, Number(x) || 0)); }
 
@@ -48,7 +48,7 @@ What we sell for this lead type: ${ctx}
 Owner's rough idea / keywords (may be very short like "mca"): ${[name, hint].filter(Boolean).join(" | ") || "(none)"}
 Email language: ${language || "English"}
 
-Write 3 DIFFERENT campaign options (keep each offer under 110 words; plain ASCII quotes; no line breaks inside strings) (different angle each: e.g. compliance deadline, cost/time saving, free audit/sample/demo). Each option:
+Write 3 DIFFERENT campaign options (keep each offer under 110 words; NEVER put a double-quote character inside any value - use single quotes instead; no line breaks inside values) (different angle each: e.g. compliance deadline, cost/time saving, free audit/sample/demo). Each option:
 - name: short internal campaign name
 - offer: a 60-110 word brief for the AI email writer — who exactly we target, the specific problem they have, what we offer, why us (only true facts from above; no invented numbers, prices, client names or guarantees), tone
 - cta: one low-friction call to action (reply / 15-min call / free sample or demo); use placeholder "+91 XXXXXXXXXX" if a phone number is needed

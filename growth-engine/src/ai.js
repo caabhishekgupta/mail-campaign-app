@@ -146,13 +146,30 @@ export function parseJSON(text) {
   if (!starts.length) throw new Error("AI returned no JSON");
   const s = Math.min(...starts); const open = t[s], close = open === "[" ? "]" : "}";
   const e = t.lastIndexOf(close);
-  try { return JSON.parse(t.slice(s, e + 1)); } catch (err) {
+  try { return JSON.parse(t.slice(s, e + 1)); } catch {}
+  try { return JSON.parse(repairQuotes(t.slice(s, e + 1))); } catch (err) {
     const objs = completeObjects(t.slice(s));
     if (!objs.length) throw new Error("AI reply was incomplete — please try again");
     // top-level object parsed fine on its own?
     if (objs.length === 1 && open === "{" && !/\{[^{}]*\{/.test(t.slice(s + 1, s + 400))) return objs[0];
     return { options: objs, businesses: objs, _salvaged: true };
   }
+}
+// Escape double quotes that sit inside a string value: a quote is "real" only if followed by , } ] or :
+function repairQuotes(str) {
+  let out = "", inStr = false;
+  for (let i = 0; i < str.length; i++) {
+    const c = str[i];
+    if (c === "\\" && inStr) { out += c + (str[i + 1] || ""); i++; continue; }
+    if (c === '"') {
+      if (!inStr) { inStr = true; out += c; continue; }
+      const next = str.slice(i + 1).match(/^\s*(.)/)?.[1];
+      if (next === undefined || ",}]:".includes(next)) { inStr = false; out += c; } else out += '\\"';
+      continue;
+    }
+    out += inStr && (c === "\n" || c === "\r") ? "\\n" : c;
+  }
+  return out;
 }
 function completeObjects(str) {
   const out = []; let depth = 0, start = -1, inStr = false, esc = false;
