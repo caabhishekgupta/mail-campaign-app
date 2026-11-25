@@ -116,7 +116,7 @@ function authView(mode) {
   </div></div>`;
 }
 async function doAuth(mode) { try { await api(mode === "setup" ? "/setup" : "/login", { method: "POST", body: { password: $("#pw").value } }); await boot(); } catch (e) { toast(e.message, "err"); } }
-async function logout() { await api("/logout", { method: "POST" }); state.status.loggedIn = false; render(); }
+async function logout() { if (state.status.portal) { location.href = "https://growth.consultguruji.com/?logout=1"; return; } await api("/logout", { method: "POST" }); state.status.loggedIn = false; render(); }
 const noAccount = () => `<div class="card"><h2>Pehle ek Brevo account jodo</h2><p class="muted">Settings → Add account me Brevo API key daalo (Brevo → Settings → SMTP & API → Generate new API key).</p><button class="btn" onclick="setTab('settings')">Go to Settings</button></div>`;
 
 const views = {

@@ -26,9 +26,13 @@ app.use(cookieSession({
 
 // ---------- auth ----------
 const hasAdmin = () => !!getSetting("admin_hash");
-const auth = (req, res, next) => (req.session?.ok ? next() : res.status(401).json({ error: "Login required" }));
+// Single sign-on: nginx checks the Growth Engine login (auth_request) and adds a secret header.
+import fs from "node:fs";
+const PORTAL_SECRET = (() => { try { return fs.readFileSync(process.env.PORTAL_SECRET_FILE || "/etc/portal_secret", "utf8").trim(); } catch { return null; } })();
+const portalOk = (req) => !!PORTAL_SECRET && req.get("x-portal-auth") === PORTAL_SECRET;
+const auth = (req, res, next) => (req.session?.ok || portalOk(req) ? next() : res.status(401).json({ error: "Login required" }));
 
-app.get("/api/status", (req, res) => res.json({ setup: hasAdmin(), loggedIn: !!req.session?.ok, hasAnthropicKey: !!getSetting("anthropic_key_enc") }));
+app.get("/api/status", (req, res) => res.json({ setup: hasAdmin() || portalOk(req), loggedIn: !!req.session?.ok || portalOk(req), portal: portalOk(req), hasAnthropicKey: !!getSetting("anthropic_key_enc") }));
 
 app.post("/api/setup", async (req, res) => {
   if (hasAdmin()) return res.status(400).json({ error: "Already set up" });

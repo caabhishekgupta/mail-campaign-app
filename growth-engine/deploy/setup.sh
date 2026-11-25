@@ -8,7 +8,7 @@ mkdir -p "$DIR"; cp -r "$SRC/." "$DIR/"; cd "$DIR"
 rm -rf node_modules; npm install --omit=dev --silent
 mkdir -p data && chmod 700 data
 pm2 delete growth-engine >/dev/null 2>&1 || true
-NODE_ENV=production PORT=$PORT pm2 start src/server.js --name growth-engine --update-env
+COOKIE_DOMAIN=.consultguruji.com NODE_ENV=production PORT=$PORT pm2 start src/server.js --name growth-engine --update-env
 pm2 save >/dev/null
 cat > /etc/nginx/sites-available/growth-engine <<NG
 server {

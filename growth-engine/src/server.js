@@ -18,7 +18,10 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 
 
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "2mb" }));
-app.use(cookieSession({ name: "growth", secret: SESSION_SECRET, maxAge: 7 * 864e5, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" }));
+app.use(cookieSession({ name: "growth", secret: SESSION_SECRET, maxAge: 7 * 864e5, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production",
+  domain: process.env.COOKIE_DOMAIN || undefined }));   // ".consultguruji.com" → one login for all office apps
+// nginx auth_request target for other apps (Listmonk admin, Brevo campaign app)
+app.get("/portal/auth", (req, res) => res.status(req.session?.ok ? 204 : 401).end());
 
 // ---------- public site for the outreach domain (taxguruji.cloud): landing + unsubscribe only ----------
 const PUBLIC_HOSTS = (process.env.PUBLIC_HOSTS || "go.taxguruji.cloud,taxguruji.cloud,www.taxguruji.cloud").split(",");

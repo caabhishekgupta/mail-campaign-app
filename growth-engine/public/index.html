@@ -43,7 +43,9 @@ async function api(p,o={}){const isF=o.body instanceof FormData;const r=await fe
 let tt;function toast(m,c=""){let t=$(".toast");if(!t){t=document.createElement("div");document.body.appendChild(t)}t.className="toast "+c;t.textContent=m;clearTimeout(tt);tt=setTimeout(()=>t.remove(),c==="err"?7000:3000)}
 const usd=n=>"$"+Number(n||0).toFixed(2);const when=s=>s?new Date(s.replace(" ","T")+(s.includes("Z")?"":"Z")).toLocaleString("en-IN",{dateStyle:"short",timeStyle:"short"}):"-";
 
-async function boot(){S.status=await api("/status");render();if(S.status.loggedIn)load()}
+const qs=new URLSearchParams(location.search);
+function goNext(){const n=qs.get("next");if(n&&/^https:\/\/[a-z0-9.-]+\.consultguruji\.com\//.test(n)){location.href=n;return true}return false}
+async function boot(){if(qs.get("logout")){await api("/logout",{method:"POST"}).catch(()=>{});history.replaceState(null,"","/")}S.status=await api("/status");if(S.status.loggedIn&&goNext())return;render();if(S.status.loggedIn)load()}
 function setTab(t){S.tab=t;localStorage.setItem("gtab",t);render();load()}
 async function load(){try{
  if(S.tab==="overview")S.ov=await api("/overview");
@@ -59,10 +61,10 @@ async function loadLeads(){const q=new URLSearchParams(Object.entries(S.lf).filt
 
 function render(){const a=$("#app");if(!S.status)return a.innerHTML="";
  if(!S.status.setup||!S.status.loggedIn){const setup=!S.status.setup;a.innerHTML=`<div class=center><div class="card login"><div class=logo style="color:var(--ink)">⚡ Growth <span style="color:var(--brand)">Engine</span></div><p class=muted>${setup?"First time — create admin password (8+ characters)":"Login"}</p><label>Password</label><input type=password id=pw autofocus onkeydown="if(event.key==='Enter')doAuth(${setup})"><div style="margin-top:12px"><button class=btn style="width:100%;justify-content:center" onclick="doAuth(${setup})">${setup?"Create & login":"Login"}</button></div></div></div>`;return}
- a.innerHTML=`<header><div class=wrap><div class=top><div class=logo>⚡ Growth <span>Engine</span></div><div class=r><span class=muted style="color:#94a3b8">ConsultGuruji · CA Abhishek Gupta</span><button class="btn ghost sm" style="color:#fff;border-color:#334155" onclick="logout()">Logout</button></div></div>
+ a.innerHTML=`<header><div class=wrap><div class=top><div class=logo>⚡ Growth <span>Engine</span></div><div class=r><a class="btn ghost sm" style="color:#fff;border-color:#334155" href="https://mail.consultguruji.com" target=_blank rel=noopener>📧 Brevo Campaigns</a><a class="btn ghost sm" style="color:#fff;border-color:#334155" href="https://lists.consultguruji.com/admin" target=_blank rel=noopener>📰 Newsletter</a><button class="btn ghost sm" style="color:#fff;border-color:#334155" onclick="logout()">Logout</button></div></div>
  <nav>${[["overview","Overview"],["inbox","🔥 Inbox / Hot leads"],["campaigns","Campaigns"],["missions","Lead missions"],["leads","Leads"],["mailboxes","Mailboxes"],["keys","AI Keys"],["import","Import"],["settings","Settings"]].map(([k,v])=>`<button class="${S.tab===k?"on":""}" onclick="setTab('${k}')">${v}</button>`).join("")}</nav></div></header>
  <main><div class=wrap>${V[S.tab]()}</div></main>`}
-async function doAuth(setup){try{await api(setup?"/setup":"/login",{method:"POST",body:{password:$("#pw").value}});await boot()}catch(e){toast(e.message,"err")}}
+async function doAuth(setup){try{await api(setup?"/setup":"/login",{method:"POST",body:{password:$("#pw").value}});if(goNext())return;await boot()}catch(e){toast(e.message,"err")}}
 async function logout(){await api("/logout",{method:"POST"});S.status.loggedIn=false;render()}
 
 const V={
