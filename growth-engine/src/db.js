@@ -77,6 +77,54 @@ CREATE TABLE IF NOT EXISTS suppression (email TEXT PRIMARY KEY, reason TEXT, at 
 CREATE TABLE IF NOT EXISTS activity (
   id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT DEFAULT (datetime('now')), agent TEXT, level TEXT, message TEXT
 );
+
+-- ===== Phase 2: outreach =====
+CREATE TABLE IF NOT EXISTS mailboxes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  purpose TEXT NOT NULL,             -- ca_client | web_pitch | software | partner | affiliate
+  email TEXT UNIQUE NOT NULL, from_name TEXT NOT NULL,
+  smtp_host TEXT, smtp_port INTEGER DEFAULT 587, imap_host TEXT, imap_port INTEGER DEFAULT 993,
+  username TEXT, pass_enc TEXT NOT NULL,
+  daily_cap INTEGER DEFAULT 40,      -- after warm-up
+  warmup_start TEXT DEFAULT (date('now','+330 minutes')),   -- IST date
+  active INTEGER DEFAULT 1, last_uid INTEGER DEFAULT 0, last_error TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS campaigns (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL, segment TEXT NOT NULL,
+  offer TEXT NOT NULL,               -- what we offer / brief for the AI writer
+  language TEXT DEFAULT 'English',
+  cta TEXT,                          -- e.g. "Reply or WhatsApp 98xxxx" / booking link
+  step_gaps TEXT DEFAULT '0,3,7',    -- days between steps (initial + follow-ups)
+  daily_new INTEGER DEFAULT 20,      -- new people started per day
+  status TEXT DEFAULT 'draft',       -- draft | approved | paused
+  approved_at TEXT, paused_reason TEXT, samples TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS enrollments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  lead_id INTEGER NOT NULL, campaign_id INTEGER NOT NULL, mailbox_id INTEGER NOT NULL,
+  step_done INTEGER DEFAULT 0, next_at TEXT, state TEXT DEFAULT 'active', -- active|replied|stopped|done|bounced
+  first_message_id TEXT, last_message_id TEXT, first_subject TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(lead_id, campaign_id)
+);
+CREATE INDEX IF NOT EXISTS enr_due ON enrollments(state, next_at);
+CREATE TABLE IF NOT EXISTS outreach (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  enrollment_id INTEGER, lead_id INTEGER, campaign_id INTEGER, mailbox_id INTEGER, step INTEGER,
+  subject TEXT, body TEXT, message_id TEXT, status TEXT, error TEXT,
+  sent_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS out_msg ON outreach(message_id);
+CREATE TABLE IF NOT EXISTS replies (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  enrollment_id INTEGER, lead_id INTEGER, mailbox_id INTEGER,
+  from_email TEXT, subject TEXT, text TEXT, message_id TEXT,
+  category TEXT, summary TEXT, suggested_reply TEXT, handled INTEGER DEFAULT 0, notified INTEGER DEFAULT 0,
+  received_at TEXT DEFAULT (datetime('now'))
+);
 `);
 
 // ---------- encryption (API keys at rest) ----------
@@ -144,6 +192,11 @@ if (!getSetting("monthly_budget_usd")) setSetting("monthly_budget_usd", "200");
 if (!getSetting("engine_on")) setSetting("engine_on", "0");
 if (!getSetting("tick_minutes")) setSetting("tick_minutes", "3");
 if (!getSetting("anthropic_search_tool")) setSetting("anthropic_search_tool", "web_search_20250305");
+if (!getSetting("public_base_url")) setSetting("public_base_url", "https://taxguruji.cloud");
+if (!getSetting("send_window")) setSetting("send_window", "10-19");          // IST hours
+if (!getSetting("send_days")) setSetting("send_days", "1,2,3,4,5,6");       // Mon..Sat
+if (!getSetting("sender_address")) setSetting("sender_address", "ConsultGuruji Advisory, Mumbai, Maharashtra 400009, India");
+if (!getSetting("internal_token")) setSetting("internal_token", crypto.randomBytes(24).toString("hex"));
 
 // Preset missions (inactive until owner switches them on)
 if (!db.prepare("SELECT COUNT(*) n FROM missions").get().n) {

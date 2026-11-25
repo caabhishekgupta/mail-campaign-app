@@ -23,6 +23,9 @@ globalThis.fetch = async (url, opts = {}) => {
   if (url.startsWith("https://api.anthropic.com/")) {
     aiCalls++;
     const body = JSON.parse(opts.body);
+    const reply = (text) => new Response(JSON.stringify({ content: [{ type: "text", text }], usage: { input_tokens: 300, output_tokens: 120 } }), { status: 200, headers: { "content-type": "application/json" } });
+    if (!body.tools && /cold emails/.test(body.system)) return reply('{"subject":"gst setup for acme","body":"Hi Acme team, saw you are a new trading company in Mumbai. We handle GST registration, accounting and ROC filings for new companies. Open to a 10-minute call this week?"}');
+    if (!body.tools && /triage replies/.test(body.system)) return reply('{"category":"interested","summary":"Pricing maang rahe hain","suggested_reply":"Thanks! Sharing details. — Abhishek"}');
     assert.ok(body.tools?.[0]?.name === "web_search", "search tool sent");
     return new Response(JSON.stringify({
       content: [
@@ -98,6 +101,52 @@ const imp = await importRows([{ email: "stop@abc.in" }, { email: "new@xyz.in", c
 assert.deepEqual(imp, { added: 1, skipped: 2 });
 console.log("✓ import + suppression");
 
+// ===== Phase 2: outreach =====
+const sentMails = [];
+globalThis.__TEST_TRANSPORT__ = { sendMail: async (m) => { sentMails.push(m); return { messageId: m.messageId }; }, verify: async () => true };
+const { outreachTick, makeSamples } = await import("../src/agents/outreach.js");
+const { handleMessage } = await import("../src/agents/inbox.js");
+const mailer = await import("../src/mailer.js");
+setSetting("send_window", "0-24"); setSetting("send_days", "0,1,2,3,4,5,6");
+db.prepare("UPDATE leads SET mx_ok=1, status='verified' WHERE email LIKE '%@acme-traders.in'").run();
+db.prepare("INSERT INTO mailboxes(purpose,email,from_name,smtp_host,imap_host,pass_enc) VALUES('ca_client','abhishek@taxguruji.cloud','CA Abhishek Gupta','mail.taxguruji.cloud','mail.taxguruji.cloud',?)").run(encrypt("pw"));
+const mb = db.prepare("SELECT * FROM mailboxes").get();
+assert.equal(mailer.mailboxCapacity(mb).allowed, 10, "warm-up day 1 = 10");
+db.prepare("INSERT INTO campaigns(name,segment,offer,daily_new) VALUES('New cos','ca_client','GST + ROC package for new companies',20)").run();
+assert.equal(await outreachTick(), 0, "draft campaign never sends");
+const smp = await makeSamples(1); assert.ok(smp.length >= 1 && smp[0].subject);
+db.prepare("UPDATE campaigns SET status='approved' WHERE id=1").run();
+const n1 = await outreachTick();
+assert.equal(n1, 1, "one company domain → one person at a time");
+const m1 = sentMails[0];
+assert.ok(!/gmail\.com/.test(m1.to), "personal email never cold-mailed");
+assert.ok(m1.headers["List-Unsubscribe"].includes("/u/") && m1.headers["List-Unsubscribe-Post"]);
+assert.ok(m1.text.includes("unsubscribe: https://taxguruji.cloud/u/"));
+console.log("✓ outreach: draft blocked, warm-up cap, 1 per domain, unsubscribe headers →", m1.to, "|", m1.subject);
+// follow-up comes in-thread once due
+db.prepare("UPDATE enrollments SET next_at=datetime('now','-1 minute')").run();
+await outreachTick();
+const m2 = sentMails[1]; assert.ok(m2 && m2.subject.startsWith("Re: ") && m2.inReplyTo === m1.messageId, "follow-up threaded");
+console.log("✓ follow-up threaded:", m2.subject);
+// reply → hot lead
+const leadRow = db.prepare("SELECT * FROM leads WHERE email=?").get(m1.to);
+let cat = await handleMessage(mb, { from: { value: [{ address: m1.to }] }, subject: "Re: x", text: "Please share your fees for GST and ROC.\n\nOn Mon wrote: ...", inReplyTo: m2.messageId, messageId: "<r1@acme>" }, "");
+assert.equal(cat, "interested"); assert.equal(db.prepare("SELECT status FROM leads WHERE id=?").get(leadRow.id).status, "hot");
+assert.equal(db.prepare("SELECT state FROM enrollments WHERE lead_id=?").get(leadRow.id).state, "replied", "sequence stops on reply");
+console.log("✓ reply → hot lead, sequence stopped");
+// short "stop" → suppressed without AI
+const other = db.prepare("SELECT * FROM leads WHERE email LIKE '%@acme-traders.in' AND id<>?").get(leadRow.id);
+cat = await handleMessage(mb, { from: { value: [{ address: other.email }] }, subject: "Re", text: "stop", messageId: "<r2@acme>" }, "");
+assert.equal(cat, "unsubscribe"); assert.ok(db.prepare("SELECT 1 FROM suppression WHERE email=?").get(other.email));
+// bounce
+db.prepare("INSERT INTO leads(email,email_type,domain,segment,status,mx_ok) VALUES('gone@zz.in','business','zz.in','ca_client','contacted',1)").run();
+cat = await handleMessage(mb, { from: { value: [{ address: "MAILER-DAEMON@mail.taxguruji.cloud" }] }, subject: "Undelivered Mail Returned to Sender" }, "Final-Recipient: rfc822; gone@zz.in\nAction: failed");
+assert.equal(cat, "bounce"); assert.equal(db.prepare("SELECT status FROM leads WHERE email='gone@zz.in'").get().status, "invalid");
+console.log("✓ stop → suppression, bounce → invalid");
+// unsubscribe token
+const tok = mailer.unsubToken(leadRow.id); assert.equal(mailer.verifyUnsub(tok), leadRow.id); assert.equal(mailer.verifyUnsub(leadRow.id + ".bad"), null);
+delete globalThis.__TEST_TRANSPORT__;
+
 // --- HTTP API smoke test ---
 const app = (await import("../src/server.js")).default;
 const srv = app.listen(0); const port = srv.address().port; const base = `http://127.0.0.1:${port}`;
@@ -118,7 +167,20 @@ assert.ok(ov.total >= 5 && ov.spend > 0);
 r = await http("/api/keys", { cookie }); assert.ok(!r.body.includes("sk-ant-test"), "key never returned in clear");
 r = await http("/api/leads.csv?segment=ca_client", { cookie }); assert.ok(r.body.startsWith("email,"));
 r = await http("/api/missions", { cookie }); assert.equal(JSON.parse(r.body).length, 6);
+r = await http("/api/mailboxes", { cookie }); assert.ok(!r.body.includes("pass_enc") && r.body.includes("capacity"));
+r = await http("/api/campaigns", { cookie }); assert.equal(JSON.parse(r.body)[0].hot, 1);
+r = await http("/api/campaigns/1", { method: "PUT", cookie, body: { offer: "changed offer" } }); assert.equal(JSON.parse(r.body).backToDraft, true);
+r = await http("/api/campaigns/1/approve", { method: "POST", cookie }); assert.equal(r.status, 400, "needs fresh samples after edit");
+r = await http("/internal/mailboxes", { method: "POST", body: { email: "x@y.z" } }); assert.equal(r.status, 403, "internal endpoint needs token");
+// public host: unsubscribe page
+const hostReq = async (p, method = "GET") => { const { default: h } = await import("node:http"); return new Promise((res) => { const q = h.request(base + p, { method, headers: { host: "taxguruji.cloud", "content-type": "application/x-www-form-urlencoded" } }, (resp) => { let d = ""; resp.on("data", (c) => (d += c)); resp.on("end", () => res({ status: resp.statusCode, body: d })); }); q.end(method === "POST" ? "List-Unsubscribe=One-Click" : undefined); }); };
+r = await hostReq("/"); assert.ok(r.body.includes("CA Abhishek Gupta"));
+r = await hostReq("/api/overview"); assert.equal(r.status, 404, "dashboard hidden on public domain");
+const lead2 = db.prepare("INSERT INTO leads(email,domain,segment,status) VALUES('bye@q.in','q.in','ca_client','contacted')").run().lastInsertRowid;
+r = await hostReq("/u/" + mailer.unsubToken(lead2), "POST"); assert.ok(r.body.includes("unsubscribed"));
+assert.ok(db.prepare("SELECT 1 FROM suppression WHERE email='bye@q.in'").get());
 srv.close();
+console.log("✓ public domain: landing, dashboard hidden, one-click unsubscribe");
 console.log("✓ API: auth, overview, masked keys, CSV, missions");
 console.log("\nALL TESTS PASSED");
 process.exit(0);

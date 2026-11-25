@@ -1,24 +1,38 @@
-// 24x7 loop: runs active missions while budget and keys allow.
-// Budget exhausted → pauses until next month (or until owner raises the cap).
+// 24x7 loop. Each tick: (1) read replies/bounces, (2) send due outreach, (3) find new leads.
+// Budget exhausted → AI work pauses until next month (or a higher cap); inbox reading continues.
 // All keys cooling (rate limit / quota) → waits and retries automatically.
 import { db, getSetting, setSetting, log } from "./db.js";
 import { budgetLeft, BudgetExceeded, NoKeyAvailable } from "./ai.js";
 import { runMissionStep, leadsToday } from "./agents/leadFinder.js";
+import { outreachTick } from "./agents/outreach.js";
+import { inboxTick } from "./agents/inbox.js";
 
 let running = false, timer = null;
-export const state = { status: "stopped", lastTick: null, lastError: null, pausedReason: null };
+export const state = { status: "stopped", lastTick: null, lastError: null, pausedReason: null, lastSent: 0, lastInbox: 0 };
+
+async function safe(name, fn) {
+  try { return await fn(); }
+  catch (e) {
+    if (e instanceof BudgetExceeded || e instanceof NoKeyAvailable) throw e;
+    log("scheduler", `${name}: ${e.message}`, "error"); state.lastError = `${name}: ${e.message}`; return 0;
+  }
+}
 
 export async function tick() {
   if (running) return; running = true; state.lastTick = new Date().toISOString();
   try {
     if (getSetting("engine_on") !== "1") { state.status = "stopped"; return; }
+    state.status = "running"; state.pausedReason = null;
+
+    if (db.prepare("SELECT COUNT(*) n FROM mailboxes WHERE active=1").get().n) {
+      state.lastInbox = await safe("inbox", inboxTick);
+      if (budgetLeft() > 0) state.lastSent = await safe("outreach", outreachTick);
+    }
+
     if (budgetLeft() <= 0) { setPaused("Monthly AI budget reached — auto-resumes next month or when you raise the budget"); return; }
     const missions = db.prepare("SELECT * FROM missions WHERE active=1 ORDER BY id").all();
-    if (!missions.length) { setPaused("No mission switched on"); return; }
     const pending = missions.filter((m) => leadsToday(m.id) < m.daily_target);
-    if (!pending.length) { setPaused("All daily lead targets reached — continues tomorrow"); return; }
-    state.status = "running"; state.pausedReason = null;
-    // round-robin: least-recently-run mission first
+    if (!pending.length) { if (!missions.length) setPaused("No lead mission switched on"); else setPaused("Daily lead targets reached — continues tomorrow"); return; }
     const last = (id) => db.prepare("SELECT MAX(id) m FROM mission_queries WHERE mission_id=?").get(id).m || 0;
     const m = pending.sort((a, b) => last(a.id) - last(b.id))[0];
     await runMissionStep(m);
@@ -31,7 +45,7 @@ export async function tick() {
   } finally { running = false; }
 }
 function setPaused(reason) {
-  if (state.pausedReason !== reason) log("scheduler", `Paused: ${reason}`, "warn");
+  if (state.pausedReason !== reason) log("scheduler", `Lead finder paused: ${reason}`, "warn");
   state.status = "paused"; state.pausedReason = reason;
 }
 

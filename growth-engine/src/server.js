@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 import { db, encrypt, decrypt, mask, getSetting, setSetting, getJSON, setJSON, SESSION_SECRET, istMonth, istDay, log } from "./db.js";
 import { budgetLeft, monthSpend, testKey } from "./ai.js";
 import { importRows } from "./agents/leadFinder.js";
+import { makeSamples } from "./agents/outreach.js";
+import { verifyUnsub, suppressLead, mailboxCapacity, notifyOwner, transportFor, sendMail } from "./mailer.js";
 import * as scheduler from "./scheduler.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -17,6 +19,24 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieSession({ name: "growth", secret: SESSION_SECRET, maxAge: 7 * 864e5, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" }));
+
+// ---------- public site for the outreach domain (taxguruji.cloud): landing + unsubscribe only ----------
+const PUBLIC_HOSTS = (process.env.PUBLIC_HOSTS || "taxguruji.cloud,www.taxguruji.cloud").split(",");
+const page = (title, body) => `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>
+<style>body{font:16px/1.6 system-ui,sans-serif;max-width:640px;margin:8vh auto;padding:0 20px;color:#0f172a}h1{font-size:26px}a{color:#0f766e}.btn{background:#0f766e;color:#fff;border:0;padding:12px 20px;border-radius:8px;font-size:16px;cursor:pointer}.muted{color:#64748b;font-size:14px}</style></head><body>${body}</body></html>`;
+app.use((req, res, next) => {
+  if (!PUBLIC_HOSTS.includes(req.hostname)) return next();
+  const m = req.path.match(/^\/u\/([\w.-]+)$/);
+  if (m) {
+    const leadId = verifyUnsub(m[1]);
+    if (!leadId) return res.status(400).send(page("Invalid link", "<h1>Link not valid</h1><p>Please reply to our email with \"unsubscribe\" and we will remove you.</p>"));
+    if (req.method === "POST") { suppressLead(leadId, "unsubscribed"); log("unsubscribe", `Lead ${leadId} unsubscribed via link`); return res.send(page("Unsubscribed", "<h1>You're unsubscribed</h1><p>We won't email you again. Sorry for the trouble.</p>")); }
+    return res.send(page("Unsubscribe", `<h1>Unsubscribe</h1><p>Click below and we will never email you again.</p><form method="post"><button class="btn">Unsubscribe me</button></form>`));
+  }
+  if (req.path === "/" ) return res.send(page("TaxGuruji — CA Abhishek Gupta", `<h1>TaxGuruji</h1><p>Business outreach desk of <b>CA Abhishek Gupta</b> (Chartered Accountant, Mumbai, 13+ years) and <a href="https://consultguruji.com">ConsultGuruji Advisory</a> — GST, income tax, company &amp; LLP compliance, accounting, virtual CFO and business websites.</p><p>Contact: <a href="https://consultguruji.com">consultguruji.com</a></p><p class="muted">${getSetting("sender_address")}<br>If you received an email from us and don't want more, use the unsubscribe link in that email or reply "no".</p>`));
+  return res.status(404).send(page("Not found", "<h1>Not found</h1>"));
+});
+app.use(express.urlencoded({ extended: false }));
 
 const hasAdmin = () => !!getSetting("admin_hash");
 const auth = (req, res, next) => (req.session?.ok ? next() : res.status(401).json({ error: "Login required" }));
@@ -54,7 +74,15 @@ app.get("/api/overview", auth, (req, res) => {
   const usageByAgent = db.prepare("SELECT agent, provider, ROUND(SUM(cost_usd),4) cost, SUM(input_tokens) inp, SUM(output_tokens) outp, SUM(searches) searches FROM usage WHERE month=? GROUP BY agent, provider").all(istMonth());
   const activity = db.prepare("SELECT * FROM activity ORDER BY id DESC LIMIT 40").all();
   const keys = db.prepare("SELECT provider, COUNT(*) n, SUM(active) active FROM ai_keys GROUP BY provider").all();
-  res.json({ engineOn: getSetting("engine_on") === "1", scheduler: scheduler.state, budget, spend, left: budgetLeft(), month: istMonth(), today, total, bySeg, usageByAgent, activity, keys });
+  const outreach = {
+    sentToday: db.prepare("SELECT COUNT(*) n FROM outreach WHERE status='sent' AND substr(sent_at,1,10)=?").get(istDay()).n,
+    sentTotal: db.prepare("SELECT COUNT(*) n FROM outreach WHERE status IN ('sent','bounced')").get().n,
+    hot: db.prepare("SELECT COUNT(*) n FROM leads WHERE status='hot'").get().n,
+    unhandled: db.prepare("SELECT COUNT(*) n FROM replies WHERE handled=0 AND category IN ('interested','question','other','wrong_person')").get().n,
+    mailboxes: db.prepare("SELECT COUNT(*) n FROM mailboxes WHERE active=1").get().n,
+    campaigns: db.prepare("SELECT COUNT(*) n FROM campaigns WHERE status='approved'").get().n,
+  };
+  res.json({ engineOn: getSetting("engine_on") === "1", scheduler: scheduler.state, budget, spend, left: budgetLeft(), month: istMonth(), today, total, bySeg, usageByAgent, activity, keys, outreach });
 });
 app.post("/api/engine", auth, (req, res) => { scheduler.setEngine(!!req.body?.on); res.json({ ok: true }); });
 app.post("/api/engine/tick", auth, wrap(async (req, res) => { await scheduler.tick(); res.json({ ok: true, state: scheduler.state }); }));
@@ -164,10 +192,94 @@ app.post("/api/import", auth, upload.single("file"), wrap(async (req, res) => {
   res.json({ rows: data.length, ...out });
 }));
 
+// ---------- mailboxes ----------
+const safeBox = (b) => ({ ...b, pass_enc: undefined, capacity: mailboxCapacity(b) });
+app.get("/api/mailboxes", auth, (req, res) => res.json(db.prepare("SELECT * FROM mailboxes ORDER BY purpose, id").all().map(safeBox)));
+function addMailbox(b) {
+  if (!SEGMENTS.includes(b.purpose) || !b.email || !b.password || !b.from_name) throw Object.assign(new Error("purpose, email, from_name, password required"), { status: 400 });
+  const host = b.host || `mail.${b.email.split("@")[1]}`;
+  return db.prepare("INSERT INTO mailboxes(purpose,email,from_name,smtp_host,smtp_port,imap_host,imap_port,username,pass_enc,daily_cap) VALUES(?,?,?,?,?,?,?,?,?,?)")
+    .run(b.purpose, b.email.toLowerCase(), b.from_name, b.smtp_host || host, +b.smtp_port || 587, b.imap_host || host, +b.imap_port || 993, b.username || b.email, encrypt(b.password), Math.min(60, +b.daily_cap || 40)).lastInsertRowid;
+}
+app.post("/api/mailboxes", auth, wrap(async (req, res) => { const id = addMailbox(req.body || {}); log("mailboxes", `Added ${req.body.email}`); res.json({ id }); }));
+// Server-side provisioning (VPS script, localhost only, internal token) — password never leaves the server.
+app.post("/internal/mailboxes", wrap(async (req, res) => {
+  const local = ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress);
+  if (!local || req.get("x-internal-token") !== getSetting("internal_token")) return res.status(403).json({ error: "forbidden" });
+  const existing = db.prepare("SELECT id FROM mailboxes WHERE email=?").get(String(req.body.email).toLowerCase());
+  if (existing) { db.prepare("UPDATE mailboxes SET pass_enc=?, from_name=?, purpose=? WHERE id=?").run(encrypt(req.body.password), req.body.from_name, req.body.purpose, existing.id); return res.json({ id: existing.id, updated: true }); }
+  res.json({ id: addMailbox(req.body || {}) });
+}));
+app.put("/api/mailboxes/:id", auth, (req, res) => {
+  const m = db.prepare("SELECT * FROM mailboxes WHERE id=?").get(+req.params.id); if (!m) return res.status(404).json({ error: "Not found" });
+  const b = req.body || {};
+  db.prepare("UPDATE mailboxes SET from_name=?, purpose=?, daily_cap=?, active=? WHERE id=?").run(b.from_name ?? m.from_name, SEGMENTS.includes(b.purpose) ? b.purpose : m.purpose, b.daily_cap ? Math.min(60, +b.daily_cap) : m.daily_cap, b.active === undefined ? m.active : b.active ? 1 : 0, m.id);
+  res.json({ ok: true });
+});
+app.delete("/api/mailboxes/:id", auth, (req, res) => { db.prepare("UPDATE mailboxes SET active=0 WHERE id=?").run(+req.params.id); res.json({ ok: true }); });
+app.post("/api/mailboxes/:id/test", auth, wrap(async (req, res) => {
+  const m = db.prepare("SELECT * FROM mailboxes WHERE id=?").get(+req.params.id);
+  await transportFor(m).verify(); res.json({ ok: true });
+}));
+
+// ---------- campaigns ----------
+app.get("/api/campaigns", auth, (req, res) => res.json(db.prepare(`SELECT c.*,
+  (SELECT COUNT(*) FROM enrollments e WHERE e.campaign_id=c.id) enrolled,
+  (SELECT COUNT(*) FROM outreach o WHERE o.campaign_id=c.id AND o.status IN ('sent','bounced')) sent,
+  (SELECT COUNT(*) FROM outreach o WHERE o.campaign_id=c.id AND o.status='bounced') bounced,
+  (SELECT COUNT(*) FROM enrollments e WHERE e.campaign_id=c.id AND e.state='replied') replied,
+  (SELECT COUNT(*) FROM replies r JOIN enrollments e ON e.id=r.enrollment_id WHERE e.campaign_id=c.id AND r.category IN ('interested','question')) hot,
+  (SELECT COUNT(*) FROM leads l WHERE l.segment=c.segment AND l.status='verified' AND l.email_type IN ('business','role')) ready
+  FROM campaigns c ORDER BY id DESC`).all()));
+app.post("/api/campaigns", auth, (req, res) => {
+  const b = req.body || {}; if (!b.name || !b.offer || !SEGMENTS.includes(b.segment)) return res.status(400).json({ error: "Name, lead type and offer required" });
+  const r = db.prepare("INSERT INTO campaigns(name,segment,offer,language,cta,step_gaps,daily_new) VALUES(?,?,?,?,?,?,?)")
+    .run(b.name, b.segment, b.offer, b.language || "English", b.cta || null, b.step_gaps || "0,3,7", Math.min(200, +b.daily_new || 20));
+  res.json({ id: r.lastInsertRowid });
+});
+app.put("/api/campaigns/:id", auth, (req, res) => {
+  const c = db.prepare("SELECT * FROM campaigns WHERE id=?").get(+req.params.id); if (!c) return res.status(404).json({ error: "Not found" });
+  const b = req.body || {};
+  // Any content change sends the campaign back to draft: the owner must approve again.
+  const changed = ["offer", "cta", "language", "step_gaps", "segment"].some((k) => b[k] !== undefined && b[k] !== c[k]);
+  db.prepare("UPDATE campaigns SET name=?, offer=?, cta=?, language=?, step_gaps=?, segment=?, daily_new=?, status=?, samples=? WHERE id=?")
+    .run(b.name ?? c.name, b.offer ?? c.offer, b.cta ?? c.cta, b.language ?? c.language, b.step_gaps ?? c.step_gaps, SEGMENTS.includes(b.segment) ? b.segment : c.segment,
+      b.daily_new ? Math.min(200, +b.daily_new) : c.daily_new, changed ? "draft" : c.status, changed ? null : c.samples, c.id);
+  res.json({ ok: true, backToDraft: changed });
+});
+app.post("/api/campaigns/:id/samples", auth, wrap(async (req, res) => res.json(await makeSamples(+req.params.id))));
+app.post("/api/campaigns/:id/approve", auth, (req, res) => {
+  const c = db.prepare("SELECT * FROM campaigns WHERE id=?").get(+req.params.id); if (!c) return res.status(404).json({ error: "Not found" });
+  if (!c.samples) return res.status(400).json({ error: "Generate and review sample emails first" });
+  if (!db.prepare("SELECT 1 FROM mailboxes WHERE active=1 AND purpose=?").get(c.segment)) return res.status(400).json({ error: "No active mailbox for this lead type" });
+  db.prepare("UPDATE campaigns SET status='approved', approved_at=datetime('now'), paused_reason=NULL WHERE id=?").run(c.id);
+  log("campaigns", `Owner approved campaign "${c.name}" (${c.daily_new} new/day)`); res.json({ ok: true });
+});
+app.post("/api/campaigns/:id/pause", auth, (req, res) => { db.prepare("UPDATE campaigns SET status='paused', paused_reason='Paused by owner' WHERE id=?").run(+req.params.id); res.json({ ok: true }); });
+
+// ---------- inbox / hot leads ----------
+app.get("/api/replies", auth, (req, res) => {
+  const cat = req.query.category; const w = cat ? "WHERE r.category=?" : ""; const p = cat ? [cat] : [];
+  res.json(db.prepare(`SELECT r.*, l.company, l.website, l.phone, m.email mailbox FROM replies r LEFT JOIN leads l ON l.id=r.lead_id LEFT JOIN mailboxes m ON m.id=r.mailbox_id ${w} ORDER BY r.id DESC LIMIT 200`).all(...p));
+});
+app.post("/api/replies/:id/send", auth, wrap(async (req, res) => {
+  const r = db.prepare("SELECT * FROM replies WHERE id=?").get(+req.params.id); if (!r) return res.status(404).json({ error: "Not found" });
+  const text = String(req.body?.text || "").trim(); if (text.length < 5) return res.status(400).json({ error: "Reply text required" });
+  const mb = db.prepare("SELECT * FROM mailboxes WHERE id=?").get(r.mailbox_id);
+  const subject = /^re:/i.test(r.subject) ? r.subject : `Re: ${r.subject}`;
+  const msgId = await sendMail(mb, { to: r.from_email, subject, text, leadId: r.lead_id, inReplyTo: r.message_id || undefined, references: r.message_id || undefined });
+  db.prepare("INSERT INTO outreach(enrollment_id,lead_id,campaign_id,mailbox_id,step,subject,body,message_id,status) VALUES(?,?,NULL,?,-1,?,?,?,'sent')").run(r.enrollment_id, r.lead_id, mb.id, subject, text, msgId);
+  db.prepare("UPDATE replies SET handled=1 WHERE id=?").run(r.id);
+  log("inbox", `Owner replied to ${r.from_email}`); res.json({ ok: true });
+}));
+app.post("/api/replies/:id/handled", auth, (req, res) => { db.prepare("UPDATE replies SET handled=1 WHERE id=?").run(+req.params.id); res.json({ ok: true }); });
+
 // ---------- settings ----------
 app.get("/api/settings", auth, (req, res) => res.json({
   monthly_budget_usd: +getSetting("monthly_budget_usd"), tick_minutes: +getSetting("tick_minutes"),
   anthropic_search_tool: getSetting("anthropic_search_tool"), pricing: getJSON("pricing", {}),
+  send_window: getSetting("send_window"), send_days: getSetting("send_days"), sender_address: getSetting("sender_address"), public_base_url: getSetting("public_base_url"),
+  notify_whatsapp_phone: getSetting("notify_whatsapp_phone") || "", notify_email: getSetting("notify_email") || "", callmebot_key_set: !!getSetting("callmebot_key_enc"),
 }));
 app.post("/api/settings", auth, (req, res) => {
   const b = req.body || {};
@@ -175,8 +287,11 @@ app.post("/api/settings", auth, (req, res) => {
   if (b.tick_minutes !== undefined) { setSetting("tick_minutes", Math.max(1, +b.tick_minutes)); scheduler.start(); }
   if (b.anthropic_search_tool) setSetting("anthropic_search_tool", b.anthropic_search_tool);
   if (b.pricing && typeof b.pricing === "object") setJSON("pricing", b.pricing);
+  for (const k of ["send_window", "send_days", "sender_address", "public_base_url", "notify_whatsapp_phone", "notify_email"]) if (b[k] !== undefined) setSetting(k, String(b[k]).trim());
+  if (b.callmebot_key) setSetting("callmebot_key_enc", encrypt(String(b.callmebot_key).trim()));
   log("settings", "Settings updated"); res.json({ ok: true });
 });
+app.post("/api/notify/test", auth, wrap(async (req, res) => res.json({ results: await notifyOwner("✅ Growth Engine test alert — hot leads yahan aayenge.") })));
 
 app.use(express.static(path.join(__dirname, "..", "public")));
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "index.html")));
