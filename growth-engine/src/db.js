@@ -192,7 +192,7 @@ if (!getSetting("monthly_budget_usd")) setSetting("monthly_budget_usd", "200");
 if (!getSetting("engine_on")) setSetting("engine_on", "0");
 if (!getSetting("tick_minutes")) setSetting("tick_minutes", "3");
 if (!getSetting("anthropic_search_tool")) setSetting("anthropic_search_tool", "web_search_20250305");
-if (!getSetting("public_base_url")) setSetting("public_base_url", "https://taxguruji.cloud");
+if (!getSetting("public_base_url")) setSetting("public_base_url", "https://go.taxguruji.cloud");
 if (!getSetting("send_window")) setSetting("send_window", "10-19");          // IST hours
 if (!getSetting("send_days")) setSetting("send_days", "1,2,3,4,5,6");       // Mon..Sat
 if (!getSetting("sender_address")) setSetting("sender_address", "ConsultGuruji Advisory, Mumbai, Maharashtra 400009, India");

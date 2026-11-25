@@ -121,7 +121,7 @@ assert.equal(n1, 1, "one company domain → one person at a time");
 const m1 = sentMails[0];
 assert.ok(!/gmail\.com/.test(m1.to), "personal email never cold-mailed");
 assert.ok(m1.headers["List-Unsubscribe"].includes("/u/") && m1.headers["List-Unsubscribe-Post"]);
-assert.ok(m1.text.includes("unsubscribe: https://taxguruji.cloud/u/"));
+assert.ok(m1.text.includes("unsubscribe: https://go.taxguruji.cloud/u/"));
 console.log("✓ outreach: draft blocked, warm-up cap, 1 per domain, unsubscribe headers →", m1.to, "|", m1.subject);
 // follow-up comes in-thread once due
 db.prepare("UPDATE enrollments SET next_at=datetime('now','-1 minute')").run();
@@ -173,7 +173,7 @@ r = await http("/api/campaigns/1", { method: "PUT", cookie, body: { offer: "chan
 r = await http("/api/campaigns/1/approve", { method: "POST", cookie }); assert.equal(r.status, 400, "needs fresh samples after edit");
 r = await http("/internal/mailboxes", { method: "POST", body: { email: "x@y.z" } }); assert.equal(r.status, 403, "internal endpoint needs token");
 // public host: unsubscribe page
-const hostReq = async (p, method = "GET") => { const { default: h } = await import("node:http"); return new Promise((res) => { const q = h.request(base + p, { method, headers: { host: "taxguruji.cloud", "content-type": "application/x-www-form-urlencoded" } }, (resp) => { let d = ""; resp.on("data", (c) => (d += c)); resp.on("end", () => res({ status: resp.statusCode, body: d })); }); q.end(method === "POST" ? "List-Unsubscribe=One-Click" : undefined); }); };
+const hostReq = async (p, method = "GET") => { const { default: h } = await import("node:http"); return new Promise((res) => { const q = h.request(base + p, { method, headers: { host: "go.taxguruji.cloud", "content-type": "application/x-www-form-urlencoded" } }, (resp) => { let d = ""; resp.on("data", (c) => (d += c)); resp.on("end", () => res({ status: resp.statusCode, body: d })); }); q.end(method === "POST" ? "List-Unsubscribe=One-Click" : undefined); }); };
 r = await hostReq("/"); assert.ok(r.body.includes("CA Abhishek Gupta"));
 r = await hostReq("/api/overview"); assert.equal(r.status, 404, "dashboard hidden on public domain");
 const lead2 = db.prepare("INSERT INTO leads(email,domain,segment,status) VALUES('bye@q.in','q.in','ca_client','contacted')").run().lastInsertRowid;

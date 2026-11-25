@@ -7,11 +7,11 @@ set -euo pipefail
 DOMAIN="${1:?domain e.g. taxguruji.cloud}"; EMAIL="${2:?email for SSL}"
 MAILHOST="mail.$DOMAIN"; DIR=/opt/mailserver; ENGINE=/opt/growth-engine
 
-echo "==> nginx: $DOMAIN (landing + unsubscribe → Growth Engine) and $MAILHOST (cert only)"
+echo "==> nginx: go.$DOMAIN (landing + unsubscribe → Growth Engine) and $MAILHOST (cert only)"
 cat > /etc/nginx/sites-available/outreach-$DOMAIN <<NG
 server {
     listen 80;
-    server_name $DOMAIN www.$DOMAIN;
+    server_name go.$DOMAIN;
     location / { proxy_pass http://127.0.0.1:3200; proxy_set_header Host \$host; proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for; proxy_set_header X-Forwarded-Proto \$scheme; }
 }
 server {
@@ -22,7 +22,7 @@ server {
 NG
 ln -sf /etc/nginx/sites-available/outreach-$DOMAIN /etc/nginx/sites-enabled/outreach-$DOMAIN
 nginx -t && systemctl reload nginx
-certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" -d "$MAILHOST" --non-interactive --agree-tos -m "$EMAIL" --redirect --expand
+certbot --nginx -d "go.$DOMAIN" -d "$MAILHOST" --non-interactive --agree-tos -m "$EMAIL" --redirect --expand
 
 echo "==> docker-mailserver"
 mkdir -p "$DIR/docker-data/dms/"{mail-data,mail-state,mail-logs,config} && cd "$DIR"

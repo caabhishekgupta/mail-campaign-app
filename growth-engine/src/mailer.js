@@ -39,7 +39,7 @@ export function verifyUnsub(token) {
   const [id, s] = String(token).split(".");
   return id && s && sig("u" + id) === s ? Number(id) : null;
 }
-export const unsubUrl = (leadId) => `${getSetting("public_base_url", "https://taxguruji.cloud").replace(/\/$/, "")}/u/${unsubToken(leadId)}`;
+export const unsubUrl = (leadId) => `${getSetting("public_base_url", "https://go.taxguruji.cloud").replace(/\/$/, "")}/u/${unsubToken(leadId)}`;
 
 export function suppressLead(leadId, reason) {
   const l = db.prepare("SELECT email FROM leads WHERE id=?").get(leadId); if (!l) return;

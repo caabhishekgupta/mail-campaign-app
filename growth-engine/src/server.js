@@ -21,7 +21,7 @@ app.use(express.json({ limit: "2mb" }));
 app.use(cookieSession({ name: "growth", secret: SESSION_SECRET, maxAge: 7 * 864e5, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" }));
 
 // ---------- public site for the outreach domain (taxguruji.cloud): landing + unsubscribe only ----------
-const PUBLIC_HOSTS = (process.env.PUBLIC_HOSTS || "taxguruji.cloud,www.taxguruji.cloud").split(",");
+const PUBLIC_HOSTS = (process.env.PUBLIC_HOSTS || "go.taxguruji.cloud,taxguruji.cloud,www.taxguruji.cloud").split(",");
 const page = (title, body) => `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>
 <style>body{font:16px/1.6 system-ui,sans-serif;max-width:640px;margin:8vh auto;padding:0 20px;color:#0f172a}h1{font-size:26px}a{color:#0f766e}.btn{background:#0f766e;color:#fff;border:0;padding:12px 20px;border-radius:8px;font-size:16px;cursor:pointer}.muted{color:#64748b;font-size:14px}</style></head><body>${body}</body></html>`;
 app.use((req, res, next) => {
