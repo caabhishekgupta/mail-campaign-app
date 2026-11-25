@@ -25,6 +25,7 @@ globalThis.fetch = async (url, opts = {}) => {
     const body = JSON.parse(opts.body);
     const reply = (text) => new Response(JSON.stringify({ content: [{ type: "text", text }], usage: { input_tokens: 300, output_tokens: 120 } }), { status: 200, headers: { "content-type": "application/json" } });
     if (!body.tools && /cold emails/.test(body.system)) return reply('{"subject":"gst setup for acme","body":"Hi Acme team, saw you are a new trading company in Mumbai. We handle GST registration, accounting and ROC filings for new companies. Open to a 10-minute call this week?"}');
+    if (!body.tools && /marketing strategist/.test(body.system)) return reply('{"options":[{"name":"MCA new cos GST","offer":"Target newly incorporated private limited companies in Mumbai that must register for GST and file ROC returns in year one. We offer a CA-led yearly compliance package.","cta":"Reply for a 15-min call","step_gaps":"0,3,7","daily_new":15},{"name":"b","offer":"x y z offer two","cta":"c","step_gaps":"bad","daily_new":99}]}');
     if (!body.tools && /triage replies/.test(body.system)) return reply('{"category":"interested","summary":"Pricing maang rahe hain","suggested_reply":"Thanks! Sharing details. — Abhishek"}');
     assert.ok(body.tools?.[0]?.name === "web_search", "search tool sent");
     return new Response(JSON.stringify({
@@ -169,6 +170,9 @@ r = await http("/api/leads.csv?segment=ca_client", { cookie }); assert.ok(r.body
 r = await http("/api/missions", { cookie }); assert.equal(JSON.parse(r.body).length, 6);
 r = await http("/api/mailboxes", { cookie }); assert.ok(!r.body.includes("pass_enc") && r.body.includes("capacity"));
 r = await http("/api/campaigns", { cookie }); assert.equal(JSON.parse(r.body)[0].hot, 1);
+r = await http("/api/campaigns/suggest", { method: "POST", cookie, body: { segment: "ca_client", name: "mca" } });
+const sug = JSON.parse(r.body); assert.equal(sug.length, 2); assert.equal(sug[1].step_gaps, "0,3,7"); assert.equal(sug[1].daily_new, 25);
+console.log("✓ AI campaign suggestions:", sug[0].name);
 r = await http("/api/campaigns/1", { method: "PUT", cookie, body: { offer: "changed offer" } }); assert.equal(JSON.parse(r.body).backToDraft, true);
 r = await http("/api/campaigns/1/approve", { method: "POST", cookie }); assert.equal(r.status, 400, "needs fresh samples after edit");
 r = await http("/internal/mailboxes", { method: "POST", body: { email: "x@y.z" } }); assert.equal(r.status, 403, "internal endpoint needs token");

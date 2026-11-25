@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { db, encrypt, decrypt, mask, getSetting, setSetting, getJSON, setJSON, SESSION_SECRET, istMonth, istDay, log } from "./db.js";
 import { budgetLeft, monthSpend, testKey } from "./ai.js";
 import { importRows } from "./agents/leadFinder.js";
-import { makeSamples } from "./agents/outreach.js";
+import { makeSamples, suggestCampaign } from "./agents/outreach.js";
 import { verifyUnsub, suppressLead, mailboxCapacity, notifyOwner, transportFor, sendMail } from "./mailer.js";
 import * as scheduler from "./scheduler.js";
 
@@ -250,6 +250,10 @@ app.put("/api/campaigns/:id", auth, (req, res) => {
       b.daily_new ? Math.min(200, +b.daily_new) : c.daily_new, changed ? "draft" : c.status, changed ? null : c.samples, c.id);
   res.json({ ok: true, backToDraft: changed });
 });
+app.post("/api/campaigns/suggest", auth, wrap(async (req, res) => {
+  const b = req.body || {}; if (!SEGMENTS.includes(b.segment)) return res.status(400).json({ error: "Lead type required" });
+  res.json(await suggestCampaign({ segment: b.segment, name: String(b.name || "").slice(0, 200), hint: String(b.hint || "").slice(0, 1000), language: b.language }));
+}));
 app.post("/api/campaigns/:id/samples", auth, wrap(async (req, res) => res.json(await makeSamples(+req.params.id))));
 app.post("/api/campaigns/:id/approve", auth, (req, res) => {
   const c = db.prepare("SELECT * FROM campaigns WHERE id=?").get(+req.params.id); if (!c) return res.status(404).json({ error: "Not found" });

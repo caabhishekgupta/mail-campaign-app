@@ -31,6 +31,40 @@ Facts about the recipient's business (use only these): ${JSON.stringify(facts)}`
   return { subject: String(j.subject || prevSubject || "quick question").slice(0, 90), body: String(j.body).trim() };
 }
 
+// What the owner actually sells, per lead type — grounding for campaign suggestions.
+const OFFER_CONTEXT = {
+  ca_client: "CA Abhishek Gupta (Mumbai, 13+ years; ConsultGuruji Advisory): GST registration & returns, accounting/bookkeeping, income tax & TDS, ROC/MCA annual filings, company/LLP compliance, audits, notices & litigation support, startup/SME advisory, virtual CFO. Targets: newly incorporated companies (MCA), MSMEs, startups.",
+  web_pitch: "TaxGuruji Web Studio (by ConsultGuruji): modern, mobile-friendly business websites built fast; we first make a FREE sample/demo homepage for the business to see, then they decide. Targets: small businesses with no, old or basic websites.",
+  software: "AI Accounts by ConsultGuruji: simple AI-powered GST billing and accounting software for Indian traders, retailers, distributors and accountants (GST returns help, ledgers, reports). Offer: free demo / trial.",
+  partner: "CA Abhishek Gupta's team in Mumbai offers white-label work-sharing to accounting/CPA/tax firms abroad (UAE, UK, USA, Canada, Australia, Singapore) and in India: bookkeeping, payroll, tax-return preparation, financial statements, overflow support during busy season, at Indian cost with CA review.",
+  affiliate: "Partner/affiliate offers relevant to small businesses, sent only to people who opted in, with clear disclosure.",
+};
+
+/** AI suggestions for a new campaign: 3 options (name, offer brief, CTA, gaps, daily). */
+export async function suggestCampaign({ segment, name, hint, language }) {
+  const ctx = OFFER_CONTEXT[segment] || OFFER_CONTEXT.ca_client;
+  const prompt = `Lead type: ${segment}
+What we sell for this lead type: ${ctx}
+Owner's rough idea / keywords (may be very short like "mca"): ${[name, hint].filter(Boolean).join(" | ") || "(none)"}
+Email language: ${language || "English"}
+
+Write 3 DIFFERENT campaign options (different angle each: e.g. compliance deadline, cost/time saving, free audit/sample/demo). Each option:
+- name: short internal campaign name
+- offer: a 60-110 word brief for the AI email writer — who exactly we target, the specific problem they have, what we offer, why us (only true facts from above; no invented numbers, prices, client names or guarantees), tone
+- cta: one low-friction call to action (reply / 15-min call / free sample or demo); use placeholder "+91 XXXXXXXXXX" if a phone number is needed
+- step_gaps: like "0,3,7"
+- daily_new: suggested new people per day during warm-up (10-25)
+Return ONLY JSON: {"options":[{"name":"","offer":"","cta":"","step_gaps":"","daily_new":15}]}`;
+  const r = await runAI({ agent: "campaign-planner", system: "You are a B2B marketing strategist for an Indian chartered accountant's firm. Be specific, honest and practical. Return only JSON.", prompt, maxTokens: 1500 });
+  const j = parseJSON(r.text);
+  const opts = (j.options || j).filter((o) => o && o.offer).slice(0, 3).map((o) => ({
+    name: String(o.name || name || "Campaign").slice(0, 80), offer: String(o.offer).trim(), cta: String(o.cta || "").trim(),
+    step_gaps: /^\d+(,\d+){0,4}$/.test(String(o.step_gaps || "")) ? o.step_gaps : "0,3,7", daily_new: Math.min(25, Math.max(5, Number(o.daily_new) || 15)),
+  }));
+  if (!opts.length) throw new Error("AI could not suggest — try adding a few words in the name box");
+  return opts;
+}
+
 /** AI sample emails for owner approval (3 real leads from the segment). */
 export async function makeSamples(campaignId) {
   const c = db.prepare("SELECT * FROM campaigns WHERE id=?").get(campaignId);
