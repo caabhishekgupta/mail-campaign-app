@@ -1,0 +1,16 @@
+{
+  "name": "growth-engine",
+  "version": "0.1.0",
+  "description": "24x7 AI Growth Engine for ConsultGuruji / CA Abhishek Gupta: multi-AI keys, lead finder, outreach",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": { "start": "node src/server.js", "test": "node test/run.js" },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.7.0",
+    "cookie-session": "^2.1.0",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1"
+  },
+  "engines": { "node": ">=20" }
+}

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Growth Engine – ConsultGuruji</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--brand:#0f766e;--brand2:#115e59;--red:#b91c1c;--green:#15803d;--amber:#b45309}
+*{box-sizing:border-box}body{margin:0;font:15px Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+button{font:inherit;cursor:pointer}input,select,textarea{font:inherit;width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+textarea{min-height:80px;resize:vertical}label{display:block;font-size:12px;font-weight:600;color:#334155;margin:10px 0 5px;text-transform:uppercase;letter-spacing:.02em}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:8px;border:1px solid var(--brand);background:var(--brand);color:#fff;font-weight:600}
+.btn:hover{background:var(--brand2)}.btn.sec{background:#fff;color:var(--brand)}.btn.ghost{background:transparent;border-color:var(--line);color:var(--ink)}.btn.red{background:var(--red);border-color:var(--red)}.btn.sm{padding:5px 9px;font-size:13px}
+header{background:#0f172a;color:#fff}.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+.top{display:flex;align-items:center;gap:14px;height:56px}.logo{font-weight:700;font-size:17px}.logo span{color:#5eead4}
+.top .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+nav{display:flex;gap:2px;overflow-x:auto}nav button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 12px;color:#cbd5e1;font-weight:600;white-space:nowrap}nav button.on{color:#fff;border-color:#5eead4}
+main{padding:20px 0 60px}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:16px}.grid{display:grid;gap:14px}.g4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.kpi small{color:var(--muted);font-size:12px;text-transform:uppercase;font-weight:600}.kpi b{display:block;font-size:24px;margin:4px 0}
+.bar{height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--brand)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}th,td{text-align:left;padding:8px 7px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-size:11.5px;text-transform:uppercase}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11.5px;font-weight:600;background:#f1f5f9;color:#334155}
+.b-on,.b-verified,.b-running,.b-hot{background:#dcfce7;color:#166534}.b-paused,.b-new{background:#fef3c7;color:#92400e}.b-invalid,.b-stopped,.b-do_not_contact,.b-unsubscribed{background:#fee2e2;color:#991b1b}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.muted{color:var(--muted);font-size:13px}.mono{font-family:ui-monospace,monospace;font-size:12px}
+.log{max-height:360px;overflow:auto;font-size:12.5px}.log div{padding:5px 0;border-bottom:1px dashed var(--line)}.log .warn{color:var(--amber)}.log .error{color:var(--red)}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:11px 16px;border-radius:10px;z-index:50;max-width:92vw}.toast.err{background:var(--red)}.toast.ok{background:var(--green)}
+.center{min-height:100vh;display:flex;align-items:center;justify-content:center}.login{width:100%;max-width:360px}
+.switch{position:relative;width:44px;height:24px;border-radius:99px;background:#cbd5e1;border:0;flex:none}.switch.on{background:var(--green)}.switch::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s}.switch.on::after{left:23px}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}.modal .card{width:100%;max-width:560px;max-height:90vh;overflow:auto}
+.note{background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;padding:10px 12px;font-size:13px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const $=(s,e=document)=>e.querySelector(s);const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const S={status:null,tab:localStorage.getItem("gtab")||"overview",ov:null,keys:[],missions:[],leads:{rows:[],total:0},lf:{},settings:null};
+const SEG={ca_client:"CA client",web_pitch:"Website pitch",software:"Software demo",partner:"Partner / work-share",affiliate:"Affiliate"};
+const PROV={anthropic:"Claude (Anthropic)",gemini:"Gemini (Google AI Studio)",openai:"OpenAI",google_places:"Google Maps Places API"};
+async function api(p,o={}){const isF=o.body instanceof FormData;const r=await fetch("/api"+p,{...o,headers:o.body&&!isF?{"content-type":"application/json"}:{},body:o.body&&!isF?JSON.stringify(o.body):o.body});const d=await r.json().catch(()=>({}));if(r.status===401&&p!=="/login"){S.status.loggedIn=false;render();throw new Error("Login required")}if(!r.ok)throw new Error(d.error||r.statusText);return d}
+let tt;function toast(m,c=""){let t=$(".toast");if(!t){t=document.createElement("div");document.body.appendChild(t)}t.className="toast "+c;t.textContent=m;clearTimeout(tt);tt=setTimeout(()=>t.remove(),c==="err"?7000:3000)}
+const usd=n=>"$"+Number(n||0).toFixed(2);const when=s=>s?new Date(s.replace(" ","T")+(s.includes("Z")?"":"Z")).toLocaleString("en-IN",{dateStyle:"short",timeStyle:"short"}):"-";
+
+async function boot(){S.status=await api("/status");render();if(S.status.loggedIn)load()}
+function setTab(t){S.tab=t;localStorage.setItem("gtab",t);render();load()}
+async function load(){try{
+ if(S.tab==="overview")S.ov=await api("/overview");
+ if(S.tab==="missions")S.missions=await api("/missions");
+ if(S.tab==="leads"){S.missions=await api("/missions");await loadLeads()}
+ if(S.tab==="keys")S.keys=await api("/keys");
+ if(S.tab==="settings")S.settings=await api("/settings");
+ render()}catch(e){toast(e.message,"err")}}
+async function loadLeads(){const q=new URLSearchParams(Object.entries(S.lf).filter(([,v])=>v));S.leads=await api("/leads?limit=200&"+q)}
+
+function render(){const a=$("#app");if(!S.status)return a.innerHTML="";
+ if(!S.status.setup||!S.status.loggedIn){const setup=!S.status.setup;a.innerHTML=`<div class=center><div class="card login"><div class=logo style="color:var(--ink)">⚡ Growth <span style="color:var(--brand)">Engine</span></div><p class=muted>${setup?"First time — create admin password (8+ characters)":"Login"}</p><label>Password</label><input type=password id=pw autofocus onkeydown="if(event.key==='Enter')doAuth(${setup})"><div style="margin-top:12px"><button class=btn style="width:100%;justify-content:center" onclick="doAuth(${setup})">${setup?"Create & login":"Login"}</button></div></div></div>`;return}
+ a.innerHTML=`<header><div class=wrap><div class=top><div class=logo>⚡ Growth <span>Engine</span></div><div class=r><span class=muted style="color:#94a3b8">ConsultGuruji · CA Abhishek Gupta</span><button class="btn ghost sm" style="color:#fff;border-color:#334155" onclick="logout()">Logout</button></div></div>
+ <nav>${[["overview","Overview"],["missions","Missions (agents)"],["leads","Leads"],["keys","AI Keys"],["import","Import (MCA/CSV)"],["settings","Settings"]].map(([k,v])=>`<button class="${S.tab===k?"on":""}" onclick="setTab('${k}')">${v}</button>`).join("")}</nav></div></header>
+ <main><div class=wrap>${V[S.tab]()}</div></main>`}
+async function doAuth(setup){try{await api(setup?"/setup":"/login",{method:"POST",body:{password:$("#pw").value}});await boot()}catch(e){toast(e.message,"err")}}
+async function logout(){await api("/logout",{method:"POST"});S.status.loggedIn=false;render()}
+
+const V={
+overview(){const o=S.ov;if(!o)return`<div class=card>Loading…</div>`;const pct=Math.min(100,o.spend/o.budget*100||0);const st=o.engineOn?o.scheduler.status:"stopped";
+ return`<div class="grid g4">
+ <div class="card kpi"><small>Engine</small><b class=row><button class="switch ${o.engineOn?"on":""}" onclick="engine(${!o.engineOn})"></button> <span class="badge b-${st}">${st}</span></b><div class=muted>${esc(o.scheduler.pausedReason||(o.scheduler.lastTick?"Last run "+new Date(o.scheduler.lastTick).toLocaleTimeString("en-IN"):"24×7 — runs every few minutes"))}</div></div>
+ <div class="card kpi"><small>AI budget ${o.month}</small><b>${usd(o.spend)} <span class=muted>/ ${usd(o.budget)}</span></b><div class=bar><i style="width:${pct}%"></i></div><div class=muted style="margin-top:6px">${usd(o.left)} left · estimates</div></div>
+ <div class="card kpi"><small>Leads today / total</small><b>${o.today} / ${o.total}</b><div class=muted>${o.bySeg.map(s=>`${SEG[s.segment]||s.segment}: ${s.verified}✓`).join(" · ")||"—"}</div></div>
+ <div class="card kpi"><small>AI keys</small><b>${o.keys.reduce((a,k)=>a+k.active,0)}</b><div class=muted>${o.keys.map(k=>`${PROV[k.provider]?.split(" ")[0]||k.provider}: ${k.active}`).join(" · ")||'<a href="#" onclick="setTab(\'keys\')">Add a key →</a>'}</div></div></div>
+ ${!o.keys.length?`<div class=note>👉 Pehle <b>AI Keys</b> me Claude key (aur free Gemini key) daalo, phir <b>Missions</b> me jo agent chahiye use ON karo, phir upar Engine ON.</div>`:""}
+ <div class="grid g2" style="margin-top:14px"><div class=card><div class=row style="justify-content:space-between"><h2>Activity</h2><span class=row><button class="btn ghost sm" onclick="runNow()">▶ Run one step now</button><button class="btn ghost sm" onclick="load()">↻</button></span></div><div class=log>${o.activity.map(x=>`<div class="${x.level}"><span class=muted>${when(x.at)}</span> <b>${esc(x.agent)}</b> ${esc(x.message)}</div>`).join("")||'<span class=muted>Nothing yet</span>'}</div></div>
+ <div class=card><h2>AI spend this month (by agent)</h2>${o.usageByAgent.length?`<table><tr><th>Agent</th><th>AI</th><th>Tokens in/out</th><th>Searches</th><th>Cost</th></tr>${o.usageByAgent.map(u=>`<tr><td>${esc(u.agent)}</td><td>${esc(u.provider)}</td><td>${u.inp}/${u.outp}</td><td>${u.searches}</td><td>${usd(u.cost)}</td></tr>`).join("")}</table>`:'<span class=muted>No AI usage yet</span>'}</div></div>`},
+missions(){return`<div class=card><div class=row style="justify-content:space-between"><h2>Missions — har agent kya dhoondhe</h2><button class="btn sm" onclick="editMission()">+ New mission</button></div><p class=muted>Switch ON = aapki approval. Engine sirf ON missions chalata hai, daily target tak.</p>
+ <table><tr><th></th><th>Mission</th><th>Type</th><th>Source</th><th>Today / target</th><th>Total</th><th></th></tr>${S.missions.map(m=>`<tr><td><button class="switch ${m.active?"on":""}" onclick="toggleMission(${m.id},${!m.active})"></button></td><td><b>${esc(m.name)}</b><div class=muted>${esc(m.description.slice(0,140))}…</div></td><td><span class=badge>${SEG[m.segment]}</span></td><td>${m.source==="maps"?"Google Maps":"AI web search"}</td><td>${m.leads_today} / ${m.daily_target}</td><td>${m.leads_total}</td><td class=row><button class="btn ghost sm" onclick="editMission(${m.id})">Edit</button><button class="btn ghost sm" onclick="queries(${m.id})">Log</button></td></tr>`).join("")}</table></div><div id=qlog></div>`},
+leads(){const l=S.leads,f=S.lf;return`<div class=card><div class=row><input placeholder="Search email, company, city…" value="${esc(f.q||"")}" onchange="S.lf.q=this.value;refreshLeads()" style="flex:2;min-width:180px">
+ <select onchange="S.lf.segment=this.value;refreshLeads()" style="flex:1"><option value="">All types</option>${Object.entries(SEG).map(([k,v])=>`<option value=${k} ${f.segment===k?"selected":""}>${v}</option>`).join("")}</select>
+ <select onchange="S.lf.status=this.value;refreshLeads()" style="flex:1"><option value="">All status</option>${["verified","new","invalid","contacted","replied","hot","unsubscribed","do_not_contact"].map(s=>`<option ${f.status===s?"selected":""}>${s}</option>`).join("")}</select>
+ <select onchange="S.lf.type=this.value;refreshLeads()" style="flex:1"><option value="">All emails</option>${["business","role","personal"].map(s=>`<option ${f.type===s?"selected":""}>${s}</option>`).join("")}</select>
+ <a class="btn sec" href="/api/leads.csv?${new URLSearchParams(Object.entries(f).filter(([,v])=>v))}">⬇ CSV</a></div>
+ <p class=muted>${l.total} leads · "personal" (Gmail etc.) cold outreach me use nahi honge.</p>
+ <div style="overflow:auto"><table><tr><th>Email</th><th>Company</th><th>Where</th><th>Type</th><th>Score</th><th>Why</th><th>Status</th></tr>${l.rows.map(r=>`<tr><td class=mono>${esc(r.email)}<div class=muted>${esc(r.email_type)}${r.phone?" · "+esc(r.phone):""}</div></td><td>${esc(r.company)}<div><a href="${esc(r.website)}" target=_blank rel=noopener class=muted>${esc(r.domain)}</a></div></td><td>${esc([r.city,r.country].filter(Boolean).join(", "))}<div class=muted>${esc(r.category||"")}</div></td><td><span class=badge>${SEG[r.segment]||""}</span></td><td>${r.score??"-"}</td><td class=muted style="max-width:240px">${esc(r.ai_notes||"")}<div><a href="${esc(r.source_url)}" target=_blank rel=noopener>source</a></div></td><td><select onchange="setStatus(${r.id},this.value)" style="padding:4px">${["new","verified","invalid","contacted","replied","hot","unsubscribed","do_not_contact"].map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}</select></td></tr>`).join("")}</table></div></div>`},
+keys(){return`<div class="grid g2"><div class=card><h2>AI keys (jitni chahein)</h2><p class=muted>Keys server par encrypted rehti hain. Engine sasti/available key pehle use karta hai; limit/quota aane par key ko kuch der rok ke agli key use karta hai.</p>
+ ${S.keys.map(k=>`<div class=row style="justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)"><div><b>${esc(k.label)}</b> <span class=badge>${PROV[k.provider]}</span> ${k.active?"":'<span class="badge b-paused">off</span>'}<div class="muted mono">${esc(k.key)} · ${esc(k.model||"default model")} · ${usd(k.spent_this_month)} this month</div>${k.last_error?`<div class=muted style="color:var(--red)">${esc(k.last_error)}</div>`:""}${k.cooldown_until&&new Date(k.cooldown_until)>new Date()?`<div class=muted style="color:var(--amber)">cooling till ${new Date(k.cooldown_until).toLocaleTimeString("en-IN")}</div>`:""}</div>
+ <div class=row><button class="btn ghost sm" onclick="testKey(${k.id})">Test</button><button class="btn ghost sm" onclick="api('/keys/${k.id}',{method:'PUT',body:{active:${!k.active},clearCooldown:true}}).then(load)">${k.active?"Disable":"Enable"}</button><button class="btn ghost sm" onclick="delKey(${k.id})">🗑</button></div></div>`).join("")||'<p class=muted>Abhi koi key nahi.</p>'}</div>
+ <div class=card><h2>+ Add key</h2><label>Provider</label><select id=kp>${Object.entries(PROV).map(([k,v])=>`<option value=${k}>${v}</option>`).join("")}</select>
+ <label>Label</label><input id=kl placeholder="e.g. Claude main ($200)"><label>API key</label><input id=kk type=password placeholder="sk-ant-… / AIza… / sk-…"><label>Model (optional)</label><input id=km placeholder="blank = default (claude-haiku-5-5 / gemini-2.5-flash)">
+ <div style="margin-top:12px"><button class=btn onclick="addKey()">Save key</button></div>
+ <p class=muted style="margin-top:12px">Claude: console.anthropic.com → API Keys. Gemini (free): aistudio.google.com → Get API key. Google Maps Places: Google Cloud console (optional, for Maps missions).</p></div></div>`},
+import(){return`<div class=card><h2>Import leads from CSV (MCA company master / any list)</h2>
+ <div class=note>MCA new-company data: <a href="https://www.data.gov.in/search?title=company%20master" target=_blank rel=noopener>data.gov.in company master</a> ya MCA portal se CSV download karo. Columns auto-detect: Email, Company name, City/State/Address, Activity, Website, Phone.</div>
+ <div class="grid g2" style="margin-top:12px"><div><label>CSV file</label><input type=file id=impf accept=".csv,text/csv"></div><div><label>Lead type</label><select id=imps>${Object.entries(SEG).map(([k,v])=>`<option value=${k}>${v}</option>`).join("")}</select></div></div>
+ <label>Source name</label><input id=impn value="mca_import"><div style="margin-top:12px"><button class=btn onclick="doImport()">Import</button> <span id=impst class=muted></span></div></div>`},
+settings(){const s=S.settings;if(!s)return"Loading…";return`<div class="grid g2"><div class=card><h2>Budget & engine</h2><label>Monthly AI budget (USD)</label><input id=sb type=number value="${s.monthly_budget_usd}"><label>Run every (minutes)</label><input id=st type=number value="${s.tick_minutes}">
+ <label>Claude web-search tool version</label><input id=sw value="${esc(s.anthropic_search_tool)}"><label>Pricing (USD per 1M tokens, estimates)</label><textarea id=sp class=mono style="min-height:160px">${esc(JSON.stringify(s.pricing,null,1))}</textarea>
+ <div style="margin-top:12px"><button class=btn onclick="saveSettings()">Save</button></div></div>
+ <div class=card><h2>Password</h2><label>Current</label><input id=p1 type=password><label>New (8+)</label><input id=p2 type=password><div style="margin-top:12px"><button class="btn sec" onclick="api('/change-password',{method:'POST',body:{current:$('#p1').value,next:$('#p2').value}}).then(()=>toast('Updated','ok')).catch(e=>toast(e.message,'err'))">Update</button></div>
+ <h2 style="margin-top:20px">Rules built in</h2><ul class=muted><li>Only emails published on a business's own website (or your imports)</li><li>robots.txt respected, max 5 pages per site, 90-day recrawl gap</li><li>MX check on every email; suppression list never re-added</li><li>Missions run only when switched ON; budget cap auto-pauses</li></ul></div></div>`}};
+
+async function engine(on){await api("/engine",{method:"POST",body:{on}});toast(on?"Engine ON":"Engine OFF","ok");setTimeout(load,800)}
+async function runNow(){toast("Running one step… (1–2 min)");try{await api("/engine/tick",{method:"POST"});toast("Step done","ok");load()}catch(e){toast(e.message,"err")}}
+async function toggleMission(id,on){await api(`/missions/${id}`,{method:"PUT",body:{active:on}});load()}
+async function queries(id){const q=await api(`/missions/${id}/queries`);$("#qlog").innerHTML=`<div class=card><h2>Search log</h2><table><tr><th>When</th><th>Angle</th><th>Sites</th><th>New leads</th></tr>${q.map(x=>`<tr><td>${when(x.at)}</td><td>${esc(x.query)}</td><td>${x.sites}</td><td>${x.leads}</td></tr>`).join("")||"<tr><td colspan=4 class=muted>Not run yet</td></tr>"}</table></div>`}
+function editMission(id){const m=id?S.missions.find(x=>x.id===id):{name:"",segment:"ca_client",source:"web",description:"",daily_target:50};const d=document.createElement("div");d.className="modal";
+ d.innerHTML=`<div class=card><h2>${id?"Edit":"New"} mission</h2><label>Name</label><input id=mn value="${esc(m.name)}"><div class="grid g2"><div><label>Lead type</label><select id=ms>${Object.entries(SEG).map(([k,v])=>`<option value=${k} ${m.segment===k?"selected":""}>${v}</option>`).join("")}</select></div><div><label>Source</label><select id=mo><option value=web ${m.source==="web"?"selected":""}>AI web search</option><option value=maps ${m.source==="maps"?"selected":""}>Google Maps (needs Places key)</option></select></div></div>
+ <label>Who to find (plain words — AI will vary cities, industries, countries)</label><textarea id=md style="min-height:120px">${esc(m.description)}</textarea><label>New leads per day</label><input id=mt type=number value="${m.daily_target}">
+ <div class=row style="justify-content:flex-end;margin-top:12px">${id?`<button class="btn ghost" onclick="if(confirm('Delete mission?'))api('/missions/${id}',{method:'DELETE'}).then(()=>{this.closest('.modal').remove();load()})">Delete</button>`:""}<button class="btn ghost" onclick="this.closest('.modal').remove()">Cancel</button><button class=btn id=msave>Save</button></div></div>`;document.body.appendChild(d);
+ $("#msave",d).onclick=async()=>{const body={name:$("#mn",d).value,segment:$("#ms",d).value,source:$("#mo",d).value,description:$("#md",d).value,daily_target:+$("#mt",d).value};try{await api(id?`/missions/${id}`:"/missions",{method:id?"PUT":"POST",body});d.remove();load()}catch(e){toast(e.message,"err")}}}
+async function refreshLeads(){await loadLeads();render()}
+async function setStatus(id,s){try{await api(`/leads/${id}`,{method:"PUT",body:{status:s}});toast("Saved","ok")}catch(e){toast(e.message,"err")}}
+async function addKey(){try{await api("/keys",{method:"POST",body:{provider:$("#kp").value,label:$("#kl").value,key:$("#kk").value,model:$("#km").value}});toast("Key saved","ok");load()}catch(e){toast(e.message,"err")}}
+async function testKey(id){toast("Testing…");try{const r=await api(`/keys/${id}/test`,{method:"POST"});toast(`✅ Works (${r.model||""}) ${r.reply||r.note||""}`,"ok");load()}catch(e){toast(e.message,"err");load()}}
+async function delKey(id){if(confirm("Delete this key?")){await api(`/keys/${id}`,{method:"DELETE"});load()}}
+async function doImport(){const f=$("#impf").files[0];if(!f)return toast("Choose a CSV","err");const fd=new FormData();fd.append("file",f);fd.append("segment",$("#imps").value);fd.append("source",$("#impn").value);$("#impst").textContent="Importing + checking MX…";try{const r=await api("/import",{method:"POST",body:fd});$("#impst").textContent=`${r.rows} rows → ${r.added} added, ${r.skipped} skipped`}catch(e){$("#impst").textContent="";toast(e.message,"err")}}
+async function saveSettings(){let pricing;try{pricing=JSON.parse($("#sp").value)}catch{return toast("Pricing JSON invalid","err")}try{await api("/settings",{method:"POST",body:{monthly_budget_usd:+$("#sb").value,tick_minutes:+$("#st").value,anthropic_search_tool:$("#sw").value,pricing}});toast("Saved","ok")}catch(e){toast(e.message,"err")}}
+boot();setInterval(()=>{if(S.tab==="overview"&&S.status?.loggedIn&&!document.hidden)load()},30000);
+</script>
+</body>
+</html>
